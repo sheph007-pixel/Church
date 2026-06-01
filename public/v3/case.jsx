@@ -206,14 +206,14 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onUpdate, onA
           <div className="timeline">
             {c.notes.length === 0 && <div className="empty-line">No notes yet.</div>}
             {c.notes.map(n => {
-              const a = TEAM.find(t => t.id === n.author) || { name: 'Unknown', initials: '?' };
+              const a = team.find(t => t.id === n.author) || { name: 'Admin', initials: 'AD' };
               return (
                 <article key={n.id} className="note">
                   <div className="note-head">
                     <Av3 id={n.author} size={26} />
                     <div className="note-meta">
                       <span className="note-author">{a.name}</span>
-                      <span className="note-time">{fmt3.relative(n.date)}</span>
+                      <span className="note-time">{fmt3.dateShort(n.date)}</span>
                     </div>
                   </div>
                   <p className="note-body">{n.text}</p>
@@ -265,7 +265,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onUpdate, onA
               <span className="section-help"> · every change, who made it, when</span>
             </h2>
           </div>
-          <CaseHistoryList events={caseEvents} />
+          <CaseHistoryList events={caseEvents} team={team} />
         </section>
       </div>
 
@@ -385,7 +385,7 @@ function NewCase3({ onClose, onCreate, me }) {
 Object.assign(window, { CaseDetail3, NewCase3, CaseHistoryList });
 
 // ─── History list (used inside case detail) ─────────────
-function CaseHistoryList({ events }) {
+function CaseHistoryList({ events, team }) {
   if (!events || events.length === 0) {
     return <div className="empty-line">No history yet. Every change made here is recorded.</div>;
   }
@@ -403,7 +403,7 @@ function CaseHistoryList({ events }) {
         <div key={d} className="history-day">
           <div className="history-day-label">{fmt3.dateFull(d + 'T00:00:00')}</div>
           <ul className="history-list">
-            {groups[d].map(e => <HistoryRow key={e.id} e={e} />)}
+            {groups[d].map(e => <HistoryRow key={e.id} e={e} team={team} />)}
           </ul>
         </div>
       ))}
@@ -411,8 +411,8 @@ function CaseHistoryList({ events }) {
   );
 }
 
-function HistoryRow({ e }) {
-  const who = TEAM.find(t => t.id === e.who) || { name: 'Unknown' };
+function HistoryRow({ e, team }) {
+  const who = (team || TEAM).find(t => t.id === e.who) || { name: 'Admin' };
   const kind = EVENT_KINDS[e.kind] || { label: e.kind, icon: 'note' };
   const detail = eventDetailText(e);
   const time = new Date(e.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });

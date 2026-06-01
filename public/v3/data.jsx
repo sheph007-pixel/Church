@@ -58,6 +58,14 @@ const fmt3 = {
   telHref: (raw) => raw ? 'tel:' + raw.replace(/[^\d+]/g, '') : null,
 };
 
+// Effective last-activity date — max of all note dates vs stored lastActivity field.
+// Ensures adding a note always moves the case to the top, even if lastActivity drifts.
+function caseLastActivity(c) {
+  let best = c.lastActivity || c.opened || '';
+  (c.notes || []).forEach(n => { if ((n.date || '') > best) best = n.date; });
+  return best;
+}
+
 // Active deacons recently involved on a case — derived from note authors.
 function caseAuthors(c) {
   const seen = new Set();
@@ -273,7 +281,7 @@ function seedEvents() {
 }
 
 Object.assign(window, {
-  TEAM, ME_ID, GROUPME_URL, STATUSES, CASES, fmt3, caseAuthors,
+  TEAM, ME_ID, GROUPME_URL, STATUSES, CASES, fmt3, caseAuthors, caseLastActivity,
   genCaseSummary, findRedactions, maskRedactions, caseSig,
   EVENT_KINDS, eventDetailText, seedEvents,
 });

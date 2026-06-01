@@ -166,7 +166,7 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
 
   const sorted = [...cases].sort((a, b) => {
     let cmp;
-    if (sortKey === 'date') cmp = new Date(a.lastActivity) - new Date(b.lastActivity);
+    if (sortKey === 'date') cmp = new Date(caseLastActivity(a)) - new Date(caseLastActivity(b));
     else if (sortKey === 'name') cmp = a.name.localeCompare(b.name);
     else cmp = a.caseNumber.localeCompare(b.caseNumber);
     return sortDir === 'asc' ? cmp : -cmp;
@@ -259,7 +259,7 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
                     </span>
                   )}
                 </div>
-                <div className="row-time">{fmt3.dateShort(c.lastActivity)}</div>
+                <div className="row-time">{fmt3.dateShort(caseLastActivity(c))}</div>
               </button>
             );
           })}
