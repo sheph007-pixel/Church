@@ -147,7 +147,8 @@ function Sidebar3({ active, onNav, counts, onNew, me, onSignOut, onSwitchMe, col
 }
 
 // ─── Case list ──────────────────────────────────────────
-function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew }) {
+function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
+  const [seedStatus, setSeedStatus] = React.useState('idle');
   return (
     <div className="case-list">
       <div className="list-head">
@@ -163,6 +164,21 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew }) {
           <Btn3 variant="primary" icon="plus" onClick={onNew}>New Case</Btn3>
         </div>
       </div>
+
+      {onImport && seedStatus !== 'done' && (
+        <div style={{ margin: '0 0 20px', padding: '18px 20px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 14 }}>
+          <Icon name="sparkle" size={18} stroke={1.7} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, fontSize: 14, color: '#065f46' }}>Import historical case data</div>
+            <div style={{ fontSize: 13, color: '#047857', marginTop: 2 }}>11 cases from the GroupMe chat (Jul 2024 – Jun 2025) are ready to load.</div>
+          </div>
+          {seedStatus === 'error' && <span style={{ fontSize: 13, color: '#dc2626' }}>Error — try again</span>}
+          {seedStatus === 'exists' && <span style={{ fontSize: 13, color: '#6b7280' }}>Already imported</span>}
+          <Btn3 variant="primary" disabled={seedStatus === 'loading'} onClick={() => onImport(setSeedStatus)}>
+            {seedStatus === 'loading' ? 'Importing…' : 'Import Now'}
+          </Btn3>
+        </div>
+      )}
 
       {cases.length === 0 ? (
         <div className="empty">

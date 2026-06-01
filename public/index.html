@@ -1678,7 +1678,25 @@ function App() {
   } else {
     main = <CaseList3 cases={filtered} onSelect={setSelectedId}
               title={titleMap[nav]} sub={`${filtered.length} ${filtered.length === 1 ? 'case' : 'cases'}`}
-              q={q} setQ={setQ} onNew={() => setNewOpen(true)} />;
+              q={q} setQ={setQ} onNew={() => setNewOpen(true)}
+              onImport={cases.length === 0 ? async (setSeedStatus) => {
+                setSeedStatus('loading');
+                try {
+                  const r = await fetch('/api/seed');
+                  const d = await r.json();
+                  if (d.ok) {
+                    const r2 = await fetch('/api/state');
+                    const { state } = await r2.json();
+                    if (state) {
+                      if (Array.isArray(state.cases)) setCases(state.cases);
+                      if (Array.isArray(state.team)) setTeam(state.team);
+                      if (Array.isArray(state.events)) setEvents(state.events);
+                      if (typeof state.caseCounter === 'number') setCaseCounter(state.caseCounter);
+                    }
+                    setSeedStatus('done');
+                  } else { setSeedStatus('exists'); }
+                } catch(e) { setSeedStatus('error'); }
+              } : null} />;
   }
 
   return (
