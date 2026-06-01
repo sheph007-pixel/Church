@@ -217,6 +217,37 @@ app.get('/api/patch-v3', async (req, res) => {
   }
 });
 
+// Patch v4 — fix 25-006 opened date (date-only string → UTC noon timestamp)
+app.get('/api/patch-v4', async (req, res) => {
+  if (!pool) return res.status(503).json({ error: 'No database' });
+  try {
+    const { rows } = await pool.query("SELECT state FROM app_state WHERE id = 'singleton'");
+    if (!rows[0]) return res.status(404).json({ error: 'No state in DB' });
+
+    const state = JSON.parse(JSON.stringify(rows[0].state));
+    const c = state.cases.find(c => c.caseNumber === '25-006');
+    if (!c) return res.status(404).json({ error: '25-006 not found' });
+
+    c.opened = '2025-08-15T12:00:00.000Z';
+    c.lastActivity = '2025-08-15T12:00:00.000Z';
+    c.notes.forEach(n => { n.date = '2025-08-15T12:00:00.000Z'; });
+
+    await pool.query(
+      `INSERT INTO app_state (id, state) VALUES ('singleton', $1)
+       ON CONFLICT (id) DO UPDATE SET state = $1, updated_at = NOW()`,
+      [state]
+    );
+
+    res.json({
+      ok: true,
+      fixed: { caseNumber: c.caseNumber, name: c.name, opened: c.opened, lastActivity: c.lastActivity },
+      totalCases: state.cases.length,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/ai/complete', async (req, res) => {
   const { prompt } = req.body;
   if (!prompt) return res.status(400).json({ error: 'No prompt' });
