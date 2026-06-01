@@ -1541,7 +1541,7 @@ function App() {
     const newCase = {
       id, caseNumber: num, name, status: 'active',
       contacts, careTeam: [],
-      opened: new Date().toISOString().slice(0, 10), lastActivity: stamp(),
+      opened: stamp(), lastActivity: stamp(),
       notes: firstNote.trim()
         ? [{ id: 'n0', author: meId, date: stamp(), text: firstNote.trim() }]
         : [],

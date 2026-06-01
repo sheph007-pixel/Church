@@ -73,16 +73,20 @@ const SUMMARY_LEN_NOTE = 'three sentences, roughly 45-60 words total';
 async function genCaseSummary(c) {
   if (c.notes.length === 0) return null;
   const notesText = c.notes.slice().reverse()
-    .map(n => {
-      const a = TEAM.find(t => t.id === n.author) || { name: 'Unknown' };
-      return `[${fmt3.dateFull(n.date)} · ${a.name}] ${n.text}`;
-    }).join('\n\n');
+    .map(n => `[${fmt3.dateFull(n.date)}] ${n.text}`)
+    .join('\n\n');
   const prompt = `You are summarizing a benevolence case file for a church care team. Read these chronological notes and produce a brief status summary.
+
+STRICT RULES:
+- Only use information explicitly stated in the notes below. Do not infer, invent, or add anything.
+- Do not mention any deacon, staff member, or care team member by name.
+- Do not reference who wrote the notes.
+- Do not use any outside knowledge about people, places, or organizations.
 
 NOTES:
 ${notesText}
 
-Write EXACTLY three sentences answering, in order: (1) What's going on? (2) What's the latest? (3) What's next? Keep every summary to a consistent length — ${SUMMARY_LEN_NOTE}. Be plain, warm, and specific. No greetings, no preamble. Don't start with "This case" or "The case" — just describe the situation.`;
+Write EXACTLY three sentences answering, in order: (1) What's going on with this person/family? (2) What's the latest development? (3) What's the next step or open question? Keep every summary to a consistent length — ${SUMMARY_LEN_NOTE}. Be plain, warm, and specific. No greetings, no preamble. Don't start with "This case" or "The case" — just describe the situation.`;
   try {
     const resp = await fetch('/api/ai/complete', {
       method: 'POST',
