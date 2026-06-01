@@ -39,7 +39,7 @@ const CASES = [
     name: 'Patrice Smiley',
     status: 'active',
     opened: '2024-07-25',
-    lastActivity: '2025-05-14T12:00:00.000Z',
+    lastActivity: '2025-05-29T12:00:00.000Z',
     contacts: [
       { id: 'p_24001_1', name: 'Patrice Smiley', phone: '', email: '', role: 'Primary' },
     ],
@@ -49,10 +49,16 @@ const CASES = [
     ],
     notes: [
       {
+        id: 'n_24001_0',
+        author: 'tm_dc',
+        date: '2025-05-29T12:00:00.000Z',
+        text: 'Approved ~$350 for a final rental extension — this is the last rental request. Van repair should be completed soon. Total rental assistance: ~$1,350 ($750 deposit + $250 first extension + $350 final extension).',
+      },
+      {
         id: 'n_24001_1',
         author: 'tm_dc',
         date: '2025-05-14T12:00:00.000Z',
-        text: 'Approved $250 for a second week of car rental (total rental cost now $750: $500 deposit + $250 extension). Van still in shop following the March alternator and power steering pump replacement. Patrice has been without her own vehicle for several weeks.',
+        text: 'Approved $250 for a second week of car rental (rental total now $1,000: $750 deposit + $250 extension). Van still in shop following the March alternator and power steering pump replacement. Patrice has been without her own vehicle for several weeks.',
       },
       {
         id: 'n_24001_2',
@@ -324,7 +330,7 @@ const CASES = [
       { id: 'ct_25002_2', name: 'Amber Peterson', role: 'Care Team' },
     ],
     tasks: [
-      { id: 't_25002_1', text: 'Check in with Amanda on progress at Blue Lake counseling', done: false, assignee: 'tm_rs' },
+      { id: 't_25002_1', text: 'Follow up with Amanda — health insurance renewal and overall stability check', done: false, assignee: 'tm_rs' },
       { id: 't_25002_2', text: 'Confirm septic system repairs are fully complete', done: false, assignee: 'tm_rs' },
     ],
     notes: [
@@ -332,7 +338,7 @@ const CASES = [
         id: 'n_25002_1',
         author: 'tm_rs',
         date: '2025-04-16T12:00:00.000Z',
-        text: 'Approved $1,500 for marriage counseling at Blue Lake Christian Clinic — approximately 9-10 sessions. Counselor in Covenant KC. March 31: $1,673 approved for septic system repairs (pump-out $631 + mini excavator $850 + mower repair by Keith Belcher $192). Total assistance to date: ~$4,378.',
+        text: 'Septic system repairs completed: $1,673 approved March 31 (pump-out $631 + mini excavator rental $850 + mower repair by Keith Belcher $192). Issue was inherited from the home purchase roughly a year ago. Amanda continues to show a sweet spirit and gratitude. Care team following up on health insurance renewal and overall stability.',
       },
       {
         id: 'n_25002_2',
@@ -404,6 +410,32 @@ const CASES = [
         author: 'tm10',
         date: '2025-05-14T12:00:00.000Z',
         text: 'Case opened (transferred from prior deacon Mitchell who rolled off). Robert works in construction; weather reduced his hours by roughly half over the past 2 months. Approved $1,331.43: approximately $1,131 in medical bills + ~$200 electric/gas utilities.',
+      },
+    ],
+    files: [],
+  },
+
+  // ─── 25-005 · Covenant KC Couple — Counseling ────────────────────────
+  {
+    id: 'c_25005',
+    caseNumber: '25-005',
+    name: 'Covenant KC Couple — Counseling',
+    status: 'paused',
+    opened: '2025-05-13',
+    lastActivity: '2025-05-13T12:00:00.000Z',
+    contacts: [],
+    careTeam: [
+      { id: 'ct_25005_1', name: 'Derek Cavin', role: 'Referring Deacon' },
+    ],
+    tasks: [
+      { id: 't_25005_1', text: 'Follow up on counseling progress at Blue Lake (Melea Stephens)', done: false, assignee: 'tm_dc' },
+    ],
+    notes: [
+      {
+        id: 'n_25005_1',
+        author: 'tm_dc',
+        date: '2025-05-13T12:00:00.000Z',
+        text: "Case opened. Derek Cavin referred this Covenant KC couple for marriage counseling. Approved $1,500 for approximately 9-10 sessions with Melea Stephens at Blue Lake Christian Clinic. Names kept confidential per couple's request. Status paused pending counseling completion.",
       },
     ],
     files: [],
