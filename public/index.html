@@ -1212,7 +1212,27 @@
 // Shared team access code. Everyone uses the same code; the email
 // is what identifies WHO you are (and gates access — must be on the team).
 const ACCESS_CODE = '4601';
-const APP_VERSION = 'v1.6 · Jun 1 2026';
+const APP_VERSION = 'v1.7 · Jun 1 2026';
+
+// Migrate legacy YY-NNN case numbers → permanent 4-digit IDs, and fix any bad dates.
+const CASE_NUM_MAP = {
+  'c_24001':'4821','c_24002':'7354','c_24003':'2967','c_24004':'5138',
+  'c_24005':'8413','c_24006':'3756','c_25001':'6290','c_25002':'1847',
+  'c_25003':'9053','c_25004':'4612','c_25005':'7825','c_25006':'3491',
+};
+function migrateCases(cases) {
+  if (!Array.isArray(cases)) return cases;
+  return cases.map(c => {
+    const mapped = CASE_NUM_MAP[c.id];
+    const fixed = mapped ? { ...c, caseNumber: mapped } : c;
+    // Fix 25-006 date if still in 2026
+    if (fixed.id === 'c_25006' && fixed.lastActivity && fixed.lastActivity.startsWith('2026')) {
+      const notes = (fixed.notes || []).map(n => ({ ...n, date: '2025-08-15T12:00:00.000Z' }));
+      return { ...fixed, opened: '2025-08-15T12:00:00.000Z', lastActivity: '2025-08-15T12:00:00.000Z', notes };
+    }
+    return fixed;
+  });
+}
 
 function LoginPage3({ team, onLogin }) {
   const [email, setEmail] = React.useState('');
@@ -1318,7 +1338,7 @@ function App() {
           if (resp.ok) {
             const { state } = await resp.json();
             if (state) {
-              if (Array.isArray(state.cases)) setCases(state.cases);
+              if (Array.isArray(state.cases)) setCases(migrateCases(state.cases));
               if (Array.isArray(state.team)) setTeam(state.team);
               if (Array.isArray(state.events)) setEvents(state.events);
             }
@@ -1426,10 +1446,9 @@ function App() {
         if (resp.ok) {
           const { state } = await resp.json();
           if (state) {
-            if (Array.isArray(state.cases)) setCases(state.cases);
+            if (Array.isArray(state.cases)) setCases(migrateCases(state.cases));
             if (Array.isArray(state.team)) setTeam(state.team);
             if (Array.isArray(state.events)) setEvents(state.events);
-            if (typeof state.caseCounter === 'number') setCaseCounter(state.caseCounter);
           }
         }
       } catch (e) {}
@@ -1657,10 +1676,9 @@ function App() {
       if (resp.ok) {
         const { state } = await resp.json();
         if (state) {
-          if (Array.isArray(state.cases)) setCases(state.cases);
+          if (Array.isArray(state.cases)) setCases(migrateCases(state.cases));
           if (Array.isArray(state.team)) setTeam(state.team);
           if (Array.isArray(state.events)) setEvents(state.events);
-          if (typeof state.caseCounter === 'number') setCaseCounter(state.caseCounter);
         }
       }
     } catch (e) {}
