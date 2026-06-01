@@ -141,6 +141,9 @@ function Sidebar3({ active, onNav, counts, onNew, me, onSignOut, onSwitchMe, col
             <Icon name="logOut" size={14} stroke={1.7} />
           </button>
         </div>
+        <div className="version-line" style={{ fontSize: 10, color: 'var(--text-faint)', textAlign: 'center', marginTop: 8, letterSpacing: '0.02em' }}>
+          {APP_VERSION}
+        </div>
       </div>
     </aside>
   );

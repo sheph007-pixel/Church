@@ -154,6 +154,7 @@
   .sidebar-collapsed .groupme-link { justify-content: center; padding: 0; gap: 0; }
   .sidebar-collapsed .groupme-link .btn-label,
   .sidebar-collapsed .groupme-link svg:last-child { display: none; }
+  .sidebar-collapsed .version-line { display: none; }
   .me-row {
     width: 100%; display: flex; align-items: center; gap: 10px;
     padding: 6px 8px; border-radius: var(--r-sm);
@@ -1194,6 +1195,7 @@
 // Shared team access code. Everyone uses the same code; the email
 // is what identifies WHO you are (and gates access — must be on the team).
 const ACCESS_CODE = '4601';
+const APP_VERSION = 'v1.4 · Jun 1 2025';
 
 function LoginPage3({ team, onLogin }) {
   const [email, setEmail] = React.useState('');
