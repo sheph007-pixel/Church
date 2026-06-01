@@ -440,6 +440,28 @@ const CASES = [
     ],
     files: [],
   },
+
+  // ─── 25-006 · Confidential, counseling (Exodus KC) ──────────────────
+  {
+    id: 'c_25006',
+    caseNumber: '25-006',
+    name: 'Confidential, counseling (Exodus KC)',
+    status: 'closed',
+    opened: '2025-08-15',
+    lastActivity: '2025-08-15T12:00:00.000Z',
+    contacts: [],
+    careTeam: [],
+    tasks: [],
+    notes: [
+      {
+        id: 'n_25006_1',
+        author: 'tm10',
+        date: '2025-08-15T12:00:00.000Z',
+        text: 'Case opened and closed (one-time approval, reconstructed from GroupMe). Referred via Martin. Member in Exodus KC with significant health issues and a need for ongoing counseling; savings exhausted on prior medical and counseling bills. Approved up to $2,000 church portion, with the member covering roughly 25% of total cost. No further activity on record after this approval. Distinct from case 24-004 (that case is the July 28 inpatient member).',
+      },
+    ],
+    files: [],
+  },
 ];
 
 const STATE = {
