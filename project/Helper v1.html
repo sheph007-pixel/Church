@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Helper — Benevolence team prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #292524;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, system-ui, sans-serif;
+    color: #fafaf9;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  button { font-family: inherit; }
+  input, textarea, select { font-family: inherit; }
+  input:focus, textarea:focus, select:focus {
+    border-color: #57534e !important;
+    box-shadow: 0 0 0 3px rgba(87,83,78,0.08) !important;
+  }
+  /* hide scrollbar on filter strip */
+  ::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+  @keyframes toastIn {
+    0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+  @keyframes screenIn {
+    0% { opacity: 0; transform: translateX(20px); }
+    100% { opacity: 1; transform: translateX(0); }
+  }
+  .screen { animation: screenIn 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+  /* Stage — center the device */
+  .stage {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px; background:
+      radial-gradient(ellipse at 30% 20%, #3c3733 0%, #292524 50%, #1c1917 100%);
+  }
+  @media (max-width: 480px) {
+    .stage { padding: 0; align-items: stretch; background: #fafaf9; }
+    .device-shrink { transform: scale(1); }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="components/ios-frame.jsx"></script>
+<script type="text/babel" src="components/tokens.jsx"></script>
+<script type="text/babel" src="components/icons.jsx"></script>
+<script type="text/babel" src="components/data.jsx"></script>
+<script type="text/babel" src="components/ui.jsx"></script>
+<script type="text/babel" src="components/screen-login.jsx"></script>
+<script type="text/babel" src="components/screens-main.jsx"></script>
+<script type="text/babel" src="components/screens-case.jsx"></script>
+<script type="text/babel" src="components/screen-money.jsx"></script>
+<script type="text/babel" src="components/screens-report.jsx"></script>
+<script type="text/babel" src="components/screens-account.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+
+// ─── App shell ─────────────────────────────────────────────
+function App() {
+  const [signedIn, setSignedIn] = React.useState(false);
+  const [tab, setTab] = React.useState('home');
+  const [stack, setStack] = React.useState([]); // route stack on top of tab
+  const [cases, setCases] = React.useState(CASES);
+  const [toast, setToast] = React.useState('');
+
+  const push = (route) => setStack(s => [...s, route]);
+  const pop = () => setStack(s => s.slice(0, -1));
+  const reset = () => setStack([]);
+  const top = stack[stack.length - 1];
+
+  const switchTab = (t) => { setTab(t); setStack([]); };
+  const openCase = (id) => push({ type: 'caseDetail', id });
+  const openReport = () => { setTab('report'); setStack([]); };
+
+  // Actions
+  const addNote = (caseId, { channel, text }) => {
+    setCases(cs => cs.map(c => c.id === caseId
+      ? { ...c, notes: [{ id: 'n' + Date.now(), author: ME_ID, date: new Date().toISOString(), channel, text }, ...c.notes],
+              lastActivity: new Date().toISOString() }
+      : c));
+    pop();
+    setToast('Note added');
+  };
+
+  const submitRequest = (caseId, { amount, purpose, payee, path }) => {
+    setCases(cs => cs.map(c => c.id === caseId
+      ? { ...c,
+          requests: [{ id: 'r' + Date.now(), amount, purpose, payee,
+                       requester: ME_ID, date: new Date().toISOString(),
+                       status: path === 'deacon' ? 'deacon_review' : 'pending_team',
+                       path, meetingDate: '2026-06-02',
+                       votes: [{ tm: ME_ID, vote: 'yes', at: new Date().toISOString() }] },
+                     ...c.requests],
+          amounts: { ...c.amounts, requested: (c.amounts.requested || 0) + amount },
+          lastActivity: new Date().toISOString() }
+      : c));
+    pop();
+    setToast(path === 'deacon' ? 'Sent for deacon review' : 'Submitted to team');
+  };
+
+  const castVote = (caseId, reqId, vote) => {
+    setCases(cs => cs.map(c => c.id !== caseId ? c : {
+      ...c,
+      requests: c.requests.map(r => r.id !== reqId ? r : {
+        ...r,
+        votes: [...r.votes.filter(v => v.tm !== ME_ID), { tm: ME_ID, vote, at: new Date().toISOString() }]
+      })
+    }));
+    setToast(vote === 'yes' ? 'Vote: yes' : 'Vote: no');
+  };
+
+  const createCase = (data) => {
+    const id = 'c' + Date.now();
+    const num = 'B-2026-' + String(17).padStart(3, '0');
+    const newCase = {
+      id, caseNumber: num,
+      household: data.household,
+      members: data.members.filter(m => m.name).map(m => ({ ...m, age: parseInt(m.age) || null })),
+      type: data.type, status: 'new', assigned: data.assigned,
+      opened: '2026-05-21', lastActivity: new Date().toISOString(),
+      amounts: { requested: 0, approved: null, disbursed: 0 },
+      summary: data.summary, notes: [], files: [], requests: [],
+    };
+    setCases(cs => [newCase, ...cs]);
+    setStack([]); setTab('cases');
+    setToast('Case ' + num + ' created');
+  };
+
+  const currentCase = top && top.id ? cases.find(c => c.id === top.id) : null;
+
+  // ── Render top route or tab root
+  let body;
+  if (top?.type === 'caseDetail' && currentCase) {
+    body = <div className="screen"><CaseDetailScreen c={currentCase}
+      onBack={pop}
+      onAddNote={(cid) => push({ type: 'addNote', id: cid })}
+      onAddRequest={(cid) => push({ type: 'newRequest', id: cid })}
+      onUploadFile={() => setToast('File picker (demo)')}
+      onVote={castVote}
+    /></div>;
+  } else if (top?.type === 'addNote' && currentCase) {
+    body = <div className="screen"><AddNoteScreen c={currentCase} onBack={pop}
+      onSave={(payload) => addNote(currentCase.id, payload)} /></div>;
+  } else if (top?.type === 'newRequest' && currentCase) {
+    body = <div className="screen"><NewRequestScreen c={currentCase} onBack={pop}
+      onSubmit={(payload) => submitRequest(currentCase.id, payload)} /></div>;
+  } else if (top?.type === 'newCase') {
+    body = <div className="screen"><NewCaseScreen onBack={pop} onCreate={createCase} /></div>;
+  } else if (top?.type === 'printPreview') {
+    body = <div className="screen"><PrintPreviewScreen cases={cases} onBack={pop} /></div>;
+  } else if (top?.type === 'audit') {
+    body = <div className="screen"><AuditScreen onBack={pop} /></div>;
+  } else if (top?.type === 'settings') {
+    body = <div className="screen"><SettingsScreen onBack={pop} /></div>;
+  } else if (top?.type === 'team') {
+    body = <div className="screen"><TeamScreen onBack={pop} /></div>;
+  } else if (tab === 'home') {
+    body = <DashboardScreen cases={cases}
+              onOpenCase={openCase}
+              onSeeAll={() => switchTab('cases')}
+              onOpenReport={openReport} />;
+  } else if (tab === 'cases') {
+    body = <CasesListScreen cases={cases} onOpenCase={openCase} />;
+  } else if (tab === 'report') {
+    body = <ReportScreen cases={cases}
+              onOpenPrint={() => push({ type: 'printPreview' })}
+              onOpenCase={openCase} />;
+  } else if (tab === 'me') {
+    body = <MeScreen cases={cases}
+              onOpenCase={openCase}
+              onOpenSettings={() => push({ type: 'settings' })}
+              onOpenAudit={() => push({ type: 'audit' })}
+              onOpenTeam={() => push({ type: 'team' })}
+              onSignOut={() => setSignedIn(false)} />;
+  }
+
+  if (!signedIn) {
+    return (
+      <div className="stage">
+        <IOSDevice keyboard={false}>
+          <LoginScreen onLogin={() => setSignedIn(true)} />
+        </IOSDevice>
+      </div>
+    );
+  }
+
+  return (
+    <div className="stage">
+      <IOSDevice keyboard={false}>
+        <div style={{ height: '100%', background: T.bg, position: 'relative' }}>
+          <div style={{ height: '100%', overflowY: 'auto', paddingTop: 50 }}>
+            {body}
+          </div>
+          {stack.length === 0 && (
+            <BottomTabs active={tab} onTab={switchTab} onCreate={() => push({ type: 'newCase' })} />
+          )}
+          <Toast msg={toast} onDone={() => setToast('')} />
+        </div>
+      </IOSDevice>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
