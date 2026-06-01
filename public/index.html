@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Internal Benevolence · Faith Presbyterian</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    /* Faith PCA — deep navy primary, warm neutrals */
+    --bg: #ffffff;
+    --bg-soft: #fafaf9;
+    --bg-sidebar: #f6f5f2;
+    --bg-hover: #ececea;
+    --text: #1a1a1a;
+    --text-muted: #5b5b5b;
+    --text-faint: #9a9a9a;
+    --border: #ebe9e4;
+    --border-strong: #d8d5cc;
+    --primary: #0f2447;          /* deep navy */
+    --primary-soft: #eaeef5;
+    --primary-deep: #0a1a36;
+    --ai: #6d28d9;
+    --ai-soft: #f3eefe;
+    --ok: #059669;
+    --warn: #a16207;
+    --danger: #b91c1c;
+    --shadow-sm: 0 1px 2px rgba(15,36,71,0.05);
+    --shadow-md: 0 4px 16px rgba(15,36,71,0.08);
+    --shadow-lg: 0 16px 48px rgba(15,36,71,0.14);
+    --r-sm: 6px;
+    --r-md: 8px;
+    --r-lg: 12px;
+    --font: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --font-disp: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, system-ui, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: var(--font); font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; }
+  button { font-family: inherit; cursor: pointer; }
+  input, textarea, select { font-family: inherit; color: var(--text); }
+  input:focus, textarea:focus, select:focus { outline: none; }
+  ::selection { background: rgba(15,36,71,0.18); }
+
+  /* ─── App shell ──────────────────────────────────────── */
+  .app {
+    display: grid;
+    grid-template-columns: min-content 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ─── Sidebar ───────────────────────────────────────── */
+  .sidebar {
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    width: 252px;
+    transition: width 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    display: flex; flex-direction: column;
+    padding: 16px 12px 10px;
+    overflow-y: auto;
+  }
+  .sidebar-brand {
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 8px 16px;
+  }
+  .brand-logo { display: flex; align-items: center; flex-shrink: 0; }
+  .brand-text { flex: 1; min-width: 0; }
+  .brand-name { font-size: 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--text); line-height: 1.2; }
+  .brand-sub  { font-size: 11px; color: var(--text-faint); margin-top: 1px; }
+  .collapse-btn {
+    background: none; border: none; padding: 4px;
+    color: var(--text-faint); cursor: pointer;
+    border-radius: var(--r-sm); display: inline-flex; align-items: center;
+    flex-shrink: 0;
+  }
+  .collapse-btn:hover { background: var(--bg-hover); color: var(--text); }
+
+  /* Collapsed sidebar — icons only */
+  .sidebar-collapsed { width: 60px; padding-left: 8px; padding-right: 8px; }
+  .sidebar-collapsed .sidebar-brand { flex-direction: column; gap: 8px; padding: 4px 0 12px; }
+  .sidebar-collapsed .brand-text { display: none; }
+  .sidebar-collapsed .new-btn {
+    width: 38px; height: 38px; padding: 0; align-self: center;
+    border-radius: 99px; gap: 0;
+  }
+  .sidebar-collapsed .new-btn .btn-label { display: none; }
+  .sidebar-collapsed .nav-label { display: none; }
+  .sidebar-collapsed .nav-item {
+    justify-content: center; padding: 8px 0; gap: 0;
+  }
+  .sidebar-collapsed .nav-item > span { display: none; }
+  .sidebar-collapsed .sidebar-foot { padding: 10px 0 0; }
+  .sidebar-collapsed .me-row { justify-content: center; padding: 6px 0; }
+  .sidebar-collapsed .me-col,
+  .sidebar-collapsed .me-row .icon-btn { display: none; }
+  .sidebar-collapsed .demo-switch { display: none; }
+
+  .new-btn {
+    width: 100%; margin-bottom: 16px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    height: 34px; padding: 0 12px;
+    background: var(--primary); color: #fff;
+    border: 1px solid var(--primary); border-radius: var(--r-md);
+    font-size: 13px; font-weight: 600;
+    box-shadow: var(--shadow-sm);
+    transition: background 120ms;
+  }
+  .new-btn:hover { background: var(--primary-deep); }
+
+  .sidebar-nav { flex: 1; display: flex; flex-direction: column; }
+  .nav-label {
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.5px;
+    text-transform: uppercase; color: var(--text-faint);
+    padding: 14px 10px 6px;
+  }
+  .nav-item {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    padding: 6px 10px; margin-bottom: 1px;
+    background: none; border: none; border-radius: var(--r-sm);
+    color: var(--text-muted); font-size: 13.5px; font-weight: 500;
+    text-align: left;
+  }
+  .nav-item:hover { background: var(--bg-hover); color: var(--text); }
+  .nav-item.active { background: var(--primary); color: #fff; }
+  .nav-item.active svg { stroke: #fff; }
+  .nav-item span:nth-child(2) { flex: 1; }
+  .nav-count {
+    font-size: 11px; color: var(--text-faint);
+    font-variant-numeric: tabular-nums; font-weight: 500;
+  }
+  .nav-item.active .nav-count { color: rgba(255,255,255,0.6); }
+  .nav-badge {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.3px;
+    padding: 2px 7px; background: var(--ai-soft); color: var(--ai);
+    border-radius: 99px;
+  }
+  .nav-item.active .nav-badge { background: rgba(255,255,255,0.2); color: #fff; }
+
+  .sidebar-foot { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 8px; }
+  .groupme-link {
+    display: flex; align-items: center; gap: 9px;
+    width: 100%; height: 38px; padding: 0 12px; margin-bottom: 10px;
+    background: var(--primary-deep); color: #fff;
+    border-radius: var(--r-md); text-decoration: none;
+    font-size: 13px; font-weight: 600; letter-spacing: -0.1px;
+    box-shadow: var(--shadow-sm);
+    transition: background 120ms;
+  }
+  .groupme-link:hover { background: #06122a; }
+  .groupme-link .btn-label { flex: 1; }
+  .groupme-link svg:last-child { color: rgba(255,255,255,0.55); }
+  .sidebar-collapsed .groupme-link { justify-content: center; padding: 0; gap: 0; }
+  .sidebar-collapsed .groupme-link .btn-label,
+  .sidebar-collapsed .groupme-link svg:last-child { display: none; }
+  .me-row {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    padding: 6px 8px; border-radius: var(--r-sm);
+  }
+  .me-col { flex: 1; min-width: 0; }
+  .me-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .me-role { font-size: 11px; color: var(--text-faint); margin-top: 2px;
+    display: flex; align-items: center; gap: 6px; }
+  .me-title { color: var(--text-faint); }
+
+  .role-tag {
+    display: inline-block; padding: 1px 6px; border-radius: 3px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.2px;
+    text-transform: uppercase; line-height: 1.5;
+  }
+  .role-admin  { background: var(--ai-soft);  color: var(--ai); }
+  .role-lead   { background: var(--primary-soft); color: var(--primary); }
+  .role-member { background: #f1f1ee; color: var(--text-muted); }
+  .role-deacon { background: #fef3c7; color: #92400e; }
+
+  .demo-switch {
+    margin-top: 8px; padding: 8px 8px; border-top: 1px dashed var(--border-strong);
+    font-size: 10.5px; color: var(--text-faint); display: flex; align-items: center; gap: 6px;
+  }
+  .demo-switch select {
+    flex: 1; font-size: 11px; padding: 3px 6px; background: transparent;
+    border: 1px solid var(--border); border-radius: var(--r-sm);
+    color: var(--text-muted);
+  }
+
+  /* ─── Buttons ───────────────────────────────────────── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border-radius: var(--r-md); font-weight: 600;
+    transition: opacity 120ms, background 120ms;
+    cursor: pointer; white-space: nowrap;
+  }
+  .btn-sm { padding: 5px 10px; height: 28px; font-size: 12.5px; }
+  .btn-md { padding: 7px 14px; height: 34px; font-size: 13.5px; }
+  .btn-lg { padding: 10px 18px; height: 42px; font-size: 14.5px; }
+  .btn-primary   { background: var(--primary); color: #fff; border: 1px solid var(--primary); }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-deep); }
+  .btn-dark      { background: var(--primary-deep); color: #fff; border: 1px solid var(--primary-deep); }
+  .btn-dark:hover:not(:disabled) { background: #06122a; }
+  .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); }
+  .btn-secondary:hover:not(:disabled) { background: var(--bg-soft); }
+  .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid transparent; }
+  .btn-ghost:hover { background: var(--bg-hover); color: var(--text); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-full { width: 100%; }
+
+  /* ─── Main column ───────────────────────────────────── */
+  .main { overflow-y: auto; background: var(--bg); }
+  .case-list, .tool-view { max-width: 1100px; margin: 0 auto; padding: 32px 32px 80px; }
+
+  .list-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 24px; margin-bottom: 24px;
+  }
+  .page-title { font-size: 26px; font-weight: 700; letter-spacing: -0.5px;
+    margin: 0; line-height: 1.1; color: var(--text); font-family: var(--font-disp); }
+  .page-sub { font-size: 13px; color: var(--text-muted); margin-top: 5px; line-height: 1.4; }
+  .head-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .search {
+    position: relative; display: flex; align-items: center;
+    width: 260px; height: 34px;
+    background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: var(--r-md); padding: 0 10px;
+  }
+  .search svg { color: var(--text-faint); flex-shrink: 0; }
+  .search input {
+    background: none; border: none; flex: 1;
+    padding: 0 8px; font-size: 13.5px; color: var(--text);
+    height: 100%; min-width: 0;
+  }
+  .search input::placeholder { color: var(--text-faint); }
+
+  /* ─── Case rows ─────────────────────────────────────── */
+  .rows { display: flex; flex-direction: column; }
+  .row {
+    display: grid;
+    grid-template-columns: 78px 1fr 110px 80px;
+    gap: 18px;
+    align-items: center;
+    padding: 16px 12px;
+    background: transparent; border: none;
+    border-top: 1px solid var(--border);
+    text-align: left; font-family: var(--font); color: var(--text);
+    cursor: pointer;
+    transition: background 120ms;
+  }
+  .row:last-child { border-bottom: 1px solid var(--border); }
+  .row:hover { background: var(--bg-soft); }
+  .row-left { display: flex; align-items: center; }
+  .row-num {
+    font-family: var(--font-mono); font-size: 11.5px;
+    color: var(--text-muted); letter-spacing: 0.4px;
+    background: var(--bg-soft); padding: 2px 7px; border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .row-mid { min-width: 0; }
+  .row-title {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 14.5px; font-weight: 600; color: var(--text);
+    letter-spacing: -0.1px; margin-bottom: 3px;
+  }
+  .row-preview {
+    font-size: 13px; color: var(--text-muted); line-height: 1.4;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .row-meta { display: flex; align-items: center; gap: 8px; justify-content: flex-start; }
+  .row-time { font-size: 12px; color: var(--text-faint); text-align: right; }
+  .task-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    background: var(--ok); color: #fff; border-radius: 99px;
+    padding: 1px 7px 1px 6px; font-size: 11px; font-weight: 500;
+  }
+  .task-badge svg { color: #fff; }
+
+  /* Status pill */
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--text-muted); font-weight: 500;
+  }
+  .status-dot { width: 7px; height: 7px; border-radius: 99px; background: var(--c, #999); }
+
+  .empty {
+    text-align: center; padding: 80px 24px; color: var(--text-muted);
+    border: 1px dashed var(--border-strong); border-radius: var(--r-lg);
+    background: var(--bg-soft);
+  }
+  .empty svg { margin-bottom: 12px; color: var(--text-faint); }
+  .empty-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .empty-body { font-size: 13px; }
+  .empty-line {
+    padding: 16px 12px; font-size: 13px; color: var(--text-faint);
+    text-align: center; font-style: italic;
+  }
+
+  /* ─── Detail layout ─────────────────────────────────── */
+  .detail {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    grid-template-rows: 50px 1fr;
+    grid-template-areas:
+      "head head"
+      "body meta";
+    height: 100vh;
+  }
+  .detail-head {
+    grid-area: head;
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 22px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .back-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: none; border: none; padding: 6px 10px 6px 4px;
+    color: var(--text-muted); font-size: 13.5px; font-weight: 600;
+    border-radius: var(--r-sm);
+  }
+  .back-btn:hover { background: var(--bg-hover); color: var(--text); }
+  .case-num {
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--text-muted); letter-spacing: 0.4px;
+    background: var(--bg-soft); padding: 3px 8px; border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .head-spacer { flex: 1; }
+
+  .detail-body {
+    grid-area: body;
+    overflow-y: auto;
+    padding: 28px 40px 80px;
+    max-width: 780px;
+    width: 100%;
+    justify-self: center;
+  }
+
+  .hero { margin-bottom: 18px; }
+  .hero-title {
+    font-size: 32px; font-weight: 700; letter-spacing: -0.7px;
+    margin: 0 0 8px; line-height: 1.1;
+    font-family: var(--font-disp); color: var(--text);
+    display: inline-flex; align-items: center; gap: 10px;
+    cursor: text;
+  }
+  .hero-title .edit-hint { color: var(--text-faint); opacity: 0; transition: opacity 120ms; }
+  .hero-title:hover .edit-hint { opacity: 1; }
+  .name-input {
+    font-size: 32px; font-weight: 700; letter-spacing: -0.7px;
+    background: var(--primary-soft);
+    border: 1px solid var(--primary);
+    border-radius: var(--r-sm); padding: 2px 8px;
+    width: 80%; font-family: var(--font-disp);
+    margin-bottom: 8px;
+  }
+  .hero-meta {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    font-size: 13px; color: var(--text-muted);
+  }
+  .dot-sep { color: var(--text-faint); }
+  .status-select {
+    border: 1px solid var(--border-strong); background: var(--bg);
+    border-radius: 99px; padding: 3px 24px 3px 10px;
+    font-size: 12px; color: var(--text); font-weight: 500;
+    -webkit-appearance: none; appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%239a9a9a" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>');
+    background-repeat: no-repeat; background-position: right 6px center; background-size: 12px;
+  }
+
+  /* AI summary card */
+  .ai-card {
+    background: var(--ai-soft);
+    border: 1px solid #e0d6f8;
+    border-radius: var(--r-lg);
+    padding: 14px 16px; margin-bottom: 28px;
+    position: relative;
+  }
+  .ai-empty {
+    background: var(--bg-soft); border-style: dashed; border-color: var(--border-strong);
+    color: var(--text-muted); font-size: 13px;
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 16px;
+  }
+  .ai-empty svg { color: var(--ai); }
+  .ai-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px;
+  }
+  .ai-label {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+    text-transform: uppercase; color: var(--ai);
+  }
+  .ai-refresh {
+    background: none; border: none; padding: 4px;
+    color: var(--ai); border-radius: var(--r-sm); display: flex;
+  }
+  .ai-refresh:hover { background: rgba(109,40,217,0.08); }
+  .ai-refresh:disabled { opacity: 0.4; }
+  .ai-body {
+    margin: 0; font-size: 14.5px; line-height: 1.55; color: #2a1c4a;
+  }
+  .ai-fallback { color: var(--text-muted); font-style: italic; }
+  .ai-foot {
+    font-size: 11px; color: var(--ai); opacity: 0.65;
+    margin-top: 8px;
+  }
+  .ai-loading { display: flex; gap: 4px; padding: 4px 0 6px; }
+  .ai-loading .dot {
+    width: 6px; height: 6px; border-radius: 99px; background: var(--ai); opacity: 0.4;
+    animation: bounce 1.2s ease-in-out infinite;
+  }
+  .ai-loading .dot:nth-child(2) { animation-delay: 0.15s; }
+  .ai-loading .dot:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce { 0%, 100% { opacity: 0.3; transform: translateY(0); }
+                      50% { opacity: 1; transform: translateY(-3px); } }
+  .spin { animation: spin 800ms linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── Sections (tasks, notes, files) ────────────────── */
+  .section { margin-bottom: 32px; }
+  .section-head { margin-bottom: 12px; }
+  .section h2 {
+    font-size: 14px; font-weight: 600; color: var(--text);
+    margin: 0; letter-spacing: -0.1px;
+    display: inline-flex; align-items: baseline; gap: 8px;
+  }
+  .section-count { font-size: 12px; color: var(--text-faint); font-weight: 500; letter-spacing: 0; text-transform: none; }
+  .section-help { font-size: 12px; color: var(--text-muted); font-weight: 400; letter-spacing: 0; text-transform: none; }
+
+  /* Tasks */
+  .task-list { list-style: none; margin: 0; padding: 0;
+    border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden;
+    background: var(--bg); }
+  .task-list:empty { display: none; }
+  .task-add {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; margin-bottom: 8px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--r-md); transition: border-color 120ms, box-shadow 120ms;
+  }
+  .task-add:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15,36,71,0.06); }
+  .task-add input.task-add-text {
+    flex: 1; border: none; background: none; font-size: 14px; padding: 4px 0;
+    outline: none; min-width: 0;
+  }
+  .task-add-due {
+    position: relative; display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 8px; border-radius: var(--r-sm);
+    color: var(--text-muted); cursor: pointer;
+    font-size: 12px; font-weight: 500;
+  }
+  .task-add-due:hover { background: var(--bg-hover); color: var(--text); }
+  .task-add-due input[type="date"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    width: 100%; height: 100%; padding: 0; border: none; background: none;
+  }
+  .task-add-due .due-pill { font-variant-numeric: tabular-nums; }
+  .task-check {
+    width: 18px; height: 18px; border-radius: 99px;
+    border: 1.5px solid var(--border-strong); background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; color: #fff; padding: 0;
+  }
+  .task-check.on { background: var(--ok); border-color: var(--ok); }
+  .task-check-empty { color: var(--text-faint); border-style: dashed; }
+  .task {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+  }
+  .task:first-of-type { border-top: none; }
+  .task-done .task-text { text-decoration: line-through; color: var(--text-faint); }
+  .task-body { flex: 1; min-width: 0; }
+  .task-text { font-size: 14px; line-height: 1.4; color: var(--text); }
+  .task-meta { display: flex; gap: 12px; margin-top: 4px; font-size: 12px; color: var(--text-muted); }
+  .task-assignee { display: inline-flex; align-items: center; gap: 4px; }
+  .task-due { color: var(--warn); }
+  .task-del { opacity: 0; transition: opacity 120ms; color: var(--text-faint); }
+  .task:hover .task-del { opacity: 1; }
+  .task-done-divider {
+    padding: 0;
+    border-top: 1px solid var(--border); background: var(--bg-soft);
+  }
+  .task-done-toggle {
+    width: 100%; padding: 7px 12px;
+    background: none; border: none; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.4px;
+    text-transform: uppercase; color: var(--text-faint);
+    text-align: left; font-family: inherit;
+  }
+  .task-done-toggle:hover { background: var(--bg-hover); color: var(--text-muted); }
+  .task-done-toggle svg { flex-shrink: 0; }
+
+  /* Notes */
+  .composer { display: flex; gap: 12px; margin-bottom: 20px; }
+  .composer-body {
+    flex: 1; background: var(--bg);
+    border: 1px solid var(--border-strong); border-radius: var(--r-lg);
+    overflow: hidden; transition: border-color 120ms, box-shadow 120ms;
+  }
+  .composer-body:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(15,36,71,0.06);
+  }
+  .composer textarea {
+    width: 100%; border: none; padding: 12px 14px;
+    font-size: 14px; line-height: 1.5; color: var(--text);
+    resize: none; min-height: 56px;
+    background: var(--bg);
+  }
+  .composer-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 10px 6px 14px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-soft);
+  }
+  .hint { font-size: 11px; color: var(--text-faint); }
+
+  .timeline { display: flex; flex-direction: column; }
+  .note {
+    padding: 14px 0;
+    border-top: 1px solid var(--border);
+  }
+  .note:first-child { border-top: none; padding-top: 4px; }
+  .note-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .note-meta { display: flex; align-items: baseline; gap: 8px; }
+  .note-author { font-size: 13px; font-weight: 600; color: var(--text); }
+  .note-time { font-size: 11.5px; color: var(--text-faint); }
+  .note-body {
+    margin: 0; padding-left: 36px;
+    font-size: 14.5px; line-height: 1.55; color: var(--text);
+  }
+
+  /* Files */
+  .file-drop {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px;
+    background: var(--bg-soft); border: 1px dashed var(--border-strong);
+    border-radius: var(--r-md); color: var(--text-muted);
+    font-size: 13px; margin-bottom: 8px; cursor: pointer;
+    transition: border-color 120ms, background 120ms;
+  }
+  .file-drop:hover { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+  .file-drop strong { color: var(--primary); font-weight: 600; }
+  .files-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .file {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; border: 1px solid var(--border);
+    border-radius: var(--r-md); background: var(--bg);
+    font-size: 13.5px;
+  }
+  .file svg { color: var(--text-faint); flex-shrink: 0; }
+  .file-name { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-size { font-size: 11.5px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+
+  /* ─── Detail meta (care team) ───────────────────────── */
+  .detail-meta {
+    grid-area: meta;
+    border-left: 1px solid var(--border);
+    background: var(--bg-sidebar);
+    overflow-y: auto;
+    padding: 24px 20px;
+  }
+  .meta-section { margin-bottom: 24px; }
+  /* meta sections (contacts + care team) */
+  .meta-section { margin-bottom: 22px; padding-bottom: 22px; border-bottom: 1px solid var(--border); }
+  .meta-section:last-child { border-bottom: none; padding-bottom: 0; }
+  .meta-label-row {
+    display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px;
+  }
+  .meta-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+    text-transform: uppercase; color: var(--text-faint);
+  }
+  .meta-count {
+    font-size: 11px; color: var(--text-faint); font-variant-numeric: tabular-nums;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 99px;
+    padding: 1px 6px; font-weight: 500;
+  }
+  .meta-hint {
+    font-size: 11.5px; color: var(--text-faint); line-height: 1.45;
+    margin-bottom: 10px;
+  }
+
+  /* contact list rows */
+  .contact-list { display: flex; flex-direction: column; gap: 2px; }
+  .contact-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 10px; border-radius: var(--r-md);
+    cursor: pointer; transition: background 100ms;
+    border: 1px solid transparent;
+  }
+  .contact-row:hover { background: var(--bg); }
+  .contact-row:hover .contact-actions { opacity: 1; }
+  .contact-body { flex: 1; min-width: 0; padding-top: 1px; }
+  .contact-name {
+    font-size: 13.5px; font-weight: 600; color: var(--text);
+    letter-spacing: -0.1px; line-height: 1.3;
+  }
+  .contact-meta {
+    display: flex; flex-wrap: wrap; gap: 4px 12px;
+    font-size: 11.5px; color: var(--text-muted); margin-top: 2px;
+  }
+  .contact-link {
+    display: inline-flex; align-items: center; gap: 4px;
+    color: var(--text-muted); text-decoration: none;
+    transition: color 100ms;
+  }
+  .contact-link:hover { color: var(--primary); }
+  .contact-link svg { color: var(--text-faint); flex-shrink: 0; }
+  .contact-link:hover svg { color: var(--primary); }
+  .contact-empty { color: var(--text-faint); font-style: italic; }
+  .contact-role {
+    font-size: 11.5px; color: var(--text-muted); margin-top: 4px;
+    line-height: 1.4;
+  }
+  .contact-actions {
+    display: flex; gap: 2px; opacity: 0; transition: opacity 100ms; flex-shrink: 0;
+  }
+  .contact-empty-state {
+    padding: 12px; text-align: center;
+    font-size: 12.5px; color: var(--text-faint); font-style: italic;
+    background: var(--bg); border: 1px dashed var(--border); border-radius: var(--r-md);
+    margin-bottom: 4px;
+  }
+  .contact-add-btn {
+    width: 100%; padding: 9px 10px; margin-top: 6px;
+    background: var(--bg); border: 1px solid var(--border-strong);
+    border-radius: var(--r-md); color: var(--text);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: all 120ms;
+  }
+  .contact-add-btn:hover { background: var(--bg-soft); border-color: var(--primary); color: var(--primary); }
+  .contact-add-btn svg { color: inherit; }
+
+  /* inline-edit form inside contact row */
+  .contact-row-edit {
+    background: var(--bg); border-color: var(--border-strong);
+    cursor: default; padding: 12px;
+    flex-direction: column; gap: 0;
+  }
+  .contact-row-edit:hover { background: var(--bg); }
+  .contact-edit-grid {
+    display: flex; flex-direction: column; gap: 6px;
+    width: 100%;
+  }
+  .contact-edit-grid input {
+    width: 100%; padding: 8px 10px;
+    background: var(--bg-sidebar); border: 1px solid var(--border-strong);
+    border-radius: var(--r-sm); font-size: 13px; color: var(--text);
+  }
+  .contact-edit-grid input:focus { border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(95,110,90,0.1); outline: none; }
+  .contact-edit-grid input.ct-name { font-weight: 600; }
+  .contact-edit-actions {
+    display: flex; justify-content: flex-end; gap: 6px;
+    margin-top: 10px; width: 100%;
+  }
+
+  /* New case modal — primary contact mini-grid */
+  .new-contact-grid {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .new-contact-grid input {
+    width: 100%; padding: 9px 12px;
+    background: var(--bg); border: 1px solid var(--border-strong);
+    border-radius: var(--r-sm); font-size: 14px;
+  }
+  .new-contact-grid input:focus { border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(95,110,90,0.1); }
+
+  .link-btn { background: none; border: none; color: var(--text-muted); font-size: 12px; padding: 4px 8px; border-radius: var(--r-sm); cursor: pointer; }
+  .link-btn:hover { background: var(--bg-hover); color: var(--text); }
+
+  .icon-btn {
+    background: none; border: none; padding: 4px;
+    color: var(--text-muted); border-radius: var(--r-sm);
+    display: inline-flex; align-items: center; cursor: pointer;
+  }
+  .icon-btn:hover { background: var(--bg-hover); color: var(--text); }
+
+  /* ─── Tool views ────────────────────────────────────── */
+  .tool-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 24px; margin-bottom: 28px;
+  }
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+  .stat {
+    padding: 16px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: var(--r-lg);
+  }
+  .stat-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.4px;
+    text-transform: uppercase; color: var(--text-faint);
+    margin-bottom: 6px;
+  }
+  .stat-val {
+    font-size: 28px; font-weight: 700; letter-spacing: -0.8px;
+    line-height: 1; color: var(--text); font-family: var(--font-disp);
+  }
+  .section-h {
+    font-size: 14px; font-weight: 600; color: var(--text);
+    margin: 28px 0 12px; letter-spacing: -0.1px;
+    display: flex; align-items: baseline;
+  }
+  .section-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+    text-transform: uppercase; color: var(--text-faint); margin-bottom: 8px;
+  }
+
+  /* Activity — with filters */
+  .activity-filters {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 20px; padding: 12px 14px;
+    background: var(--bg-soft); border: 1px solid var(--border); border-radius: var(--r-md);
+  }
+  .filter-group { display: flex; align-items: center; gap: 8px; }
+  .filter-group label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.4px;
+    text-transform: uppercase; color: var(--text-faint);
+  }
+  .filter-group select {
+    border: 1px solid var(--border-strong); background: var(--bg);
+    border-radius: var(--r-sm); padding: 5px 24px 5px 8px; font-size: 12.5px;
+    -webkit-appearance: none; appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%239a9a9a" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>');
+    background-repeat: no-repeat; background-position: right 6px center; background-size: 11px;
+  }
+  .filter-count {
+    margin-left: auto; font-size: 12px; color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .activity-day { margin-bottom: 24px; }
+  .activity-list { list-style: none; margin: 0; padding: 0;
+    border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; background: var(--bg); }
+  .activity-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 11px 14px; border-top: 1px solid var(--border);
+  }
+  .activity-row:first-child { border-top: none; }
+  .activity-body { flex: 1; min-width: 0; }
+  .activity-line { font-size: 13px; color: var(--text); line-height: 1.45; }
+  .activity-line strong { font-weight: 600; }
+  .activity-text {
+    font-size: 12.5px; color: var(--text-muted); margin-top: 2px; line-height: 1.45;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .activity-time { font-size: 12px; color: var(--text-faint); font-family: var(--font-mono); white-space: nowrap; }
+  .mono { font-family: var(--font-mono); font-size: 0.92em; }
+  .muted { color: var(--text-faint); }
+  .link-case {
+    background: none; border: none; padding: 0; color: var(--text);
+    font: inherit; cursor: pointer;
+  }
+  .link-case:hover { color: var(--primary); text-decoration: underline; }
+  .link-case .muted { color: var(--text-faint); }
+  .link-case:hover .muted { color: var(--primary); opacity: 0.7; }
+
+  /* Per-case history (compact timeline) */
+  .history { display: flex; flex-direction: column; gap: 18px; }
+  .history-day-label {
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.5px;
+    text-transform: uppercase; color: var(--text-faint);
+    margin-bottom: 6px;
+  }
+  .history-list {
+    list-style: none; margin: 0; padding: 0;
+    position: relative;
+  }
+  .history-list::before {
+    content: ''; position: absolute;
+    left: 9px; top: 14px; bottom: 14px; width: 1px;
+    background: var(--border);
+  }
+  .history-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 6px 0; position: relative;
+  }
+  .history-icon {
+    width: 19px; height: 19px; border-radius: 99px;
+    background: var(--bg); border: 1px solid var(--border-strong);
+    color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px; position: relative; z-index: 1;
+  }
+  .history-icon[data-kind="note_added"]     { background: var(--primary-soft); color: var(--primary); border-color: var(--primary-soft); }
+  .history-icon[data-kind="task_completed"] { background: var(--ok); color: #fff; border-color: var(--ok); }
+  .history-icon[data-kind="task_added"]     { background: var(--bg-soft); }
+  .history-icon[data-kind="file_uploaded"]  { background: #fef3c7; color: #92400e; border-color: #fef3c7; }
+  .history-icon[data-kind="file_deleted"],
+  .history-icon[data-kind="task_deleted"],
+  .history-icon[data-kind="care_team_removed"] { background: #fee2e2; color: #b91c1c; border-color: #fee2e2; }
+  .history-icon[data-kind="case_created"]   { background: var(--ai-soft); color: var(--ai); border-color: var(--ai-soft); }
+  .history-icon[data-kind="status_changed"],
+  .history-icon[data-kind="case_renamed"]   { background: var(--ai-soft); color: var(--ai); border-color: var(--ai-soft); }
+  .history-icon[data-kind="care_team_added"] { background: var(--primary-soft); color: var(--primary); border-color: var(--primary-soft); }
+  .history-body { flex: 1; min-width: 0; }
+  .history-line { font-size: 12.5px; color: var(--text); line-height: 1.45; }
+  .history-line strong { font-weight: 600; }
+  .history-detail { font-size: 12px; color: var(--text-muted); margin-top: 1px; line-height: 1.4;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .history-time { font-size: 11.5px; color: var(--text-faint); font-family: var(--font-mono); flex-shrink: 0; padding-top: 2px; }
+
+  /* Members */
+  .members-section { margin-bottom: 28px; }
+  .members-list { border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; background: var(--bg); }
+  .member-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 14px;
+    border-top: 1px solid var(--border);
+  }
+  .member-row:first-child { border-top: none; }
+  .member-col { flex: 1; min-width: 0; }
+  .member-name { font-size: 14px; font-weight: 600; color: var(--text);
+    display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .leader-tag {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: var(--primary); background: var(--primary-soft);
+    padding: 1px 7px 1px 5px; border-radius: 99px;
+  }
+  .leader-tag svg { color: var(--primary); }
+
+  .nav-item-external { text-decoration: none; }
+  .nav-item-external::after {
+    content: '\2197'; font-size: 11px; color: var(--text-faint);
+    margin-left: auto; padding-right: 2px;
+  }
+  .sidebar-collapsed .nav-item-external::after { display: none; }
+  .member-you { color: var(--text-faint); font-weight: 400; }
+  .member-contact { display: flex; gap: 16px; margin-top: 3px; font-size: 12.5px; }
+  .member-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; min-width: 160px; }
+  .member-row-edit { background: var(--bg); border-color: var(--border-strong); }
+  .member-edit-grid {
+    flex: 1; min-width: 0;
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;
+  }
+  .member-edit-grid input {
+    padding: 7px 9px; background: var(--bg-sidebar);
+    border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+    font-size: 13px; color: var(--text);
+  }
+  .member-edit-grid input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(95,110,90,0.1); outline: none; }
+  .member-since { font-size: 11px; color: var(--text-faint); }
+  .member-lastlogin { font-size: 11.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .member-never { color: var(--text-faint); font-style: italic; }
+  .member-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .member-actions select {
+    border: 1px solid var(--border-strong); background: var(--bg);
+    border-radius: var(--r-sm); padding: 5px 24px 5px 8px; font-size: 12px;
+    -webkit-appearance: none; appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%239a9a9a" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>');
+    background-repeat: no-repeat; background-position: right 6px center; background-size: 11px;
+  }
+  .member-remove:hover { color: var(--danger); }
+
+  /* ─── Modal ─────────────────────────────────────────── */
+  .modal-scrim {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(15,36,71,0.4);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    animation: scrimIn 160ms ease;
+  }
+  .modal {
+    width: 100%; max-width: 560px;
+    background: var(--bg); border-radius: 14px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    animation: modalIn 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    max-height: calc(100vh - 48px);
+    display: flex; flex-direction: column;
+  }
+  .modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+  }
+  .modal-head h2 { font-size: 17px; font-weight: 600; margin: 0; letter-spacing: -0.2px; font-family: var(--font-disp); }
+  .modal-body { padding: 20px; overflow-y: auto; }
+  .modal-intro { font-size: 13.5px; color: var(--text-muted); margin: 0 0 18px; line-height: 1.5; }
+  .form-row { margin-bottom: 18px; }
+  .form-row label {
+    display: block; font-size: 11.5px; font-weight: 600;
+    letter-spacing: 0.4px; text-transform: uppercase;
+    color: var(--text-faint); margin-bottom: 7px;
+  }
+  .form-row .optional { color: var(--text-faint); font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 11px; }
+  .form-row input, .form-row textarea {
+    width: 100%; padding: 9px 12px;
+    background: var(--bg); border: 1px solid var(--border-strong);
+    border-radius: var(--r-md); font-size: 14px; color: var(--text);
+    resize: vertical;
+  }
+  .form-row input:focus, .form-row textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(15,36,71,0.06);
+  }
+  .form-hint { font-size: 11.5px; color: var(--text-faint); margin-top: 5px; line-height: 1.4; }
+  .assign-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .assign-btn {
+    display: flex; align-items: center; gap: 7px;
+    padding: 7px 10px;
+    background: var(--bg); border: 1px solid var(--border-strong);
+    border-radius: var(--r-md); font-size: 12.5px; color: var(--text);
+    font-weight: 500; text-align: left;
+  }
+  .assign-btn.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .role-btn {
+    text-align: left; padding: 10px 12px;
+    background: var(--bg); border: 1px solid var(--border-strong); border-radius: var(--r-md);
+    cursor: pointer; transition: all 120ms;
+  }
+  .role-btn.on { background: var(--primary); border-color: var(--primary); }
+  .role-btn-label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .role-btn.on .role-btn-label { color: #fff; }
+  .role-btn-hint { font-size: 11.5px; color: var(--text-muted); line-height: 1.35; }
+  .role-btn.on .role-btn-hint { color: rgba(255,255,255,0.75); }
+  .modal-foot {
+    display: flex; justify-content: flex-end; gap: 8px;
+    padding: 14px 20px; border-top: 1px solid var(--border);
+    background: var(--bg-soft);
+  }
+
+  /* ─── Print preview "paper" ─────────────────────────── */
+  .print-wrap { padding-bottom: 60px; }
+  .paper {
+    background: #fff; border: 1px solid var(--border);
+    box-shadow: var(--shadow-md); border-radius: 4px;
+    padding: 48px 56px;
+    max-width: 720px; margin: 0 auto;
+    font-size: 13.5px; line-height: 1.6; color: #1a1a1a;
+  }
+  .paper-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    border-bottom: 2px solid var(--primary); padding-bottom: 14px; margin-bottom: 24px;
+  }
+  .paper-org { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; color: var(--primary); font-family: var(--font-disp); }
+  .paper-brand { display: flex; align-items: center; gap: 12px; }
+  .paper-brand svg { flex-shrink: 0; }
+  .paper-sub { font-size: 11.5px; color: #5b5b5b; margin-top: 2px; }
+  .paper-meta { font-size: 11.5px; color: #5b5b5b; text-align: right; }
+  .paper-lead { font-size: 14px; line-height: 1.65; margin: 0 0 28px; }
+  .paper-h {
+    font-size: 11.5px; font-weight: 700; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--primary);
+    border-bottom: 1px solid var(--primary); padding-bottom: 4px;
+    margin: 28px 0 14px;
+  }
+  .paper-item { margin-bottom: 22px; padding-bottom: 22px; }
+  .paper-item:last-child { padding-bottom: 0; }
+  .paper-item-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .paper-case-num { font-family: var(--font-mono); font-size: 11.5px; color: #5b5b5b; }
+  .paper-status { font-size: 11px; padding: 2px 7px; background: var(--primary-soft); color: var(--primary); border-radius: 99px; font-weight: 600; }
+  .paper-item-line { font-size: 13.5px; margin-bottom: 4px; }
+  .paper-summary { line-height: 1.6; color: #2a2a2a; }
+  .redact-box {
+    display: inline-block; vertical-align: -2px;
+    height: 13px; background: #0f2447; border-radius: 2px;
+    margin: 0 1px;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  /* Name/summary masking. Default = redacted. Reveal shows real text ON SCREEN only. */
+  .reveal-only { display: none; }
+  .paper-reveal .reveal-only { display: inline; }
+  .paper-reveal .redact-only { display: none; }
+  .paper-loading { color: var(--text-faint); }
+  .paper-foot {
+    margin-top: 36px; padding-top: 14px;
+    border-top: 1px solid #d8d5cc;
+    font-size: 10.5px; color: #71717a; text-align: center; line-height: 1.6;
+  }
+  .paper-item { break-inside: avoid; }
+  /* Per-page footer (page numbers) — only shows when printing. */
+  .paper-page-foot { display: none; }
+  @media print {
+    .paper-page { break-after: page; page-break-after: always; }
+    .paper-page:last-child { break-after: auto; page-break-after: auto; }
+    .paper-page-foot {
+      display: block; margin-top: 28px; padding-top: 12px;
+      border-top: 1px solid #d8d5cc;
+      font-size: 10px; color: #71717a; text-align: center; line-height: 1.5;
+    }
+  }
+
+  /* ─── Login ─────────────────────────────────────────── */
+  .login-page {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 32px;
+    background:
+      radial-gradient(ellipse at 50% 20%, #f6f5f2 0%, #ebe9e4 100%);
+  }
+  .login-card {
+    width: 100%; max-width: 420px;
+    background: var(--bg); border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+    padding: 48px 44px 44px;
+    text-align: center;
+  }
+  .login-logo { margin-bottom: 28px; display: flex; justify-content: center; }
+  .login-card h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.3px; margin: 0 0 28px; font-family: var(--font-disp); color: var(--text); }
+  .login-card .sub { font-size: 13.5px; color: var(--text-muted); margin-bottom: 24px; }
+  .login-card input {
+    width: 100%; padding: 12px 14px;
+    border: 1px solid var(--border-strong); border-radius: var(--r-md);
+    font-size: 14.5px; margin-bottom: 14px;
+  }
+  .login-card input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15,36,71,0.08); }
+  .login-card .pin-input { text-align: center; letter-spacing: 12px; font-family: var(--font-mono); font-size: 20px; }
+  .login-card .submit {
+    width: 100%; height: 44px;
+    background: var(--primary); color: #fff; border: none; border-radius: var(--r-md);
+    font-size: 14.5px; font-weight: 600;
+  }
+  .login-card .submit:disabled { opacity: 0.4; cursor: not-allowed; }
+  .login-card .submit:hover:not(:disabled) { background: var(--primary-deep); }
+  .login-card .note {
+    margin-top: 18px; padding: 11px 13px;
+    background: var(--bg-soft); border-radius: var(--r-md);
+    font-size: 11.5px; color: var(--text-muted); line-height: 1.5;
+    display: flex; gap: 8px; align-items: flex-start; text-align: left;
+  }
+  .login-card .note svg { color: var(--text-faint); flex-shrink: 0; margin-top: 1px; }
+  .login-error {
+    background: #fef2f2; border: 1px solid #fecaca; color: var(--danger);
+    border-radius: var(--r-md); padding: 9px 12px; margin-bottom: 14px;
+    font-size: 12.5px; line-height: 1.45; text-align: left;
+  }
+
+  @keyframes scrimIn { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(10px) scale(0.98) }
+                       to   { opacity: 1; transform: translateY(0) scale(1) } }
+
+  /* ─── Responsive ────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+      flex-direction: row; align-items: center;
+      padding: 8px 12px; height: 56px;
+      border-bottom: 1px solid var(--border); border-right: none;
+    }
+    .sidebar-brand { padding: 0; flex: 1; }
+    .new-btn { width: auto; margin: 0; padding: 0 14px; height: 32px; font-size: 12.5px; }
+    .sidebar-nav, .sidebar-foot { display: none; }
+    .main { padding-top: 56px; }
+    .detail { grid-template-columns: 1fr;
+      grid-template-areas: "head" "body" "meta";
+      height: auto; min-height: 100vh; }
+    .detail-meta { border-left: none; border-top: 1px solid var(--border); }
+    .detail-body { padding: 24px 20px 60px; }
+    .case-list, .tool-view { padding: 20px; }
+    .row { grid-template-columns: 60px 1fr; gap: 12px; padding: 14px 6px; }
+    .row-meta, .row-time { display: none; }
+    .list-head, .tool-head { flex-direction: column; align-items: stretch; gap: 14px; }
+    .head-actions { width: 100%; }
+    .search { flex: 1; width: auto; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .member-edit-grid { grid-template-columns: 1fr; }
+    .hero-title { font-size: 26px; }
+    .paper { padding: 28px 22px; }
+    .member-meta { display: none; }
+  }
+
+  @media print {
+    .sidebar, .detail-head, .detail-meta, .tool-head, .composer { display: none !important; }
+    body { background: #fff; }
+    /* Let content flow across pages instead of scrolling inside the app shell. */
+    html, body { height: auto !important; overflow: visible !important; }
+    .app { display: block !important; height: auto !important; overflow: visible !important; }
+    .main { height: auto !important; overflow: visible !important; }
+    .tool-view, .print-wrap { height: auto !important; overflow: visible !important; max-width: none !important; padding: 0 !important; }
+    .paper { box-shadow: none; border: none; padding: 0; max-width: none; }
+    /* Printing is ALWAYS redacted, even if names are revealed on screen. */
+    .reveal-only { display: none !important; }
+    .redact-only { display: inline !important; }
+    /* Force redaction boxes (and name bars) to actually print as solid bars. */
+    .redact-box, .name-bar {
+      -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
+      background: #0f2447 !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="components/icons.jsx"></script>
+<script type="text/babel" src="v3/data.jsx"></script>
+<script type="text/babel" src="v3/contacts.jsx"></script>
+<script type="text/babel" src="v3/app.jsx"></script>
+<script type="text/babel" src="v3/case.jsx"></script>
+<script type="text/babel" src="v3/tools.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+
+// Shared team access code. Everyone uses the same code; the email
+// is what identifies WHO you are (and gates access — must be on the team).
+const ACCESS_CODE = '4601';
+
+function LoginPage3({ team, onLogin }) {
+  const [email, setEmail] = React.useState('anna.beckett@outlook.com');
+  const [code, setCode] = React.useState('');
+  const [error, setError] = React.useState('');
+
+  const submit = (e) => {
+    e.preventDefault();
+    const clean = email.trim().toLowerCase();
+    const member = team.find(m => (m.email || '').trim().toLowerCase() === clean);
+    if (!member) {
+      setError("We don't recognize that email. Ask your team lead to add you to the team first.");
+      return;
+    }
+    if (code !== ACCESS_CODE) {
+      setError("That access code isn't right. It's the shared team code — check with your team lead.");
+      return;
+    }
+    onLogin(member.id);
+  };
+
+  return (
+    <div className="login-page">
+      <div className="login-card">
+        <div className="login-logo">
+          <img
+            src="https://faith-pca.org/wp-content/uploads/2022/09/faith-presbyterian-logo.svg"
+            alt="Faith Presbyterian"
+            style={{ height: 52, width: 'auto', maxWidth: 220, display: 'block' }}
+            onError={e => {
+              e.target.outerHTML = `<svg viewBox="0 0 36 36" width="44" height="44" fill="none"><rect width="36" height="36" rx="9" fill="#0f2447"/><path d="M12 9 H25 V13.5 H17 V16.5 H24 V21 H17 V28 H12 Z" fill="#fff"/></svg>`;
+            }}
+          />
+        </div>
+        <h1>Internal Benevolence</h1>
+        <form onSubmit={submit}>
+          <input value={email}
+                 onChange={e => { setEmail(e.target.value); setError(''); }}
+                 type="email" placeholder="your@email.com" autoFocus
+                 autoComplete="email" />
+          <input value={code}
+                 onChange={e => { setCode(e.target.value.replace(/\D/g,'').slice(0,4)); setError(''); }}
+                 className="pin-input" placeholder="••••" inputMode="numeric"
+                 aria-label="Access code" />
+          {error && <div className="login-error">{error}</div>}
+          <button type="submit" className="submit"
+                  disabled={!email.trim() || code.length !== 4}>Sign In</button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [signedIn, setSignedIn] = React.useState(false);
+  const [meId, setMeId] = React.useState(ME_ID);
+  const [nav, setNav] = React.useState('active');
+  const [selectedId, setSelectedId] = React.useState(null);
+  const [cases, setCases] = React.useState(CASES);
+  const [team, setTeam] = React.useState(TEAM);
+  const [events, setEvents] = React.useState(() => seedEvents());
+  const [q, setQ] = React.useState('');
+  const [newOpen, setNewOpen] = React.useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(
+    () => localStorage.getItem('ib_sidebar_collapsed') === '1'
+  );
+  React.useEffect(() => {
+    localStorage.setItem('ib_sidebar_collapsed', sidebarCollapsed ? '1' : '0');
+  }, [sidebarCollapsed]);
+
+  // ── System-generated summaries ───────────────────────
+  // Stored statically per case: { text, redacted, at, sig, loading }.
+  // Regenerated only when a note/task changes (sig change) or manual refresh.
+  // Persisted so they survive reloads — the same summary shows on the case
+  // page and the (redacted) Monthly Report.
+  const [summaries, setSummaries] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('ib_summaries_v4') || '{}'); } catch (e) { return {}; }
+  });
+  React.useEffect(() => {
+    localStorage.setItem('ib_summaries_v4', JSON.stringify(summaries));
+  }, [summaries]);
+  const summariesRef = React.useRef(summaries);
+  React.useEffect(() => { summariesRef.current = summaries; }, [summaries]);
+
+  // ── Audit log helper ─────────────────────────────────
+  // Every mutation funnels through this. Events are immutable.
+  const logEvent = React.useCallback((caseId, kind, detail) => {
+    setEvents(es => [{
+      id: 'e' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      caseId, at: new Date().toISOString(),
+      who: meId, kind, detail: detail || {},
+    }, ...es]);
+  }, [meId]);
+
+  // Generate (or regenerate) a case's summary + its redacted twin, then store
+  // both with a timestamp. Logs to history when it's a real regeneration
+  // (manual refresh, or content changed) — not the first lazy fill.
+  const ensureSummary = React.useCallback((c, force = false) => {
+    const cur = summariesRef.current[c.id];
+    const sig = caseSig(c);
+    if (!force) {
+      if (c.notes.length === 0) return;
+      if (cur && cur.loading) return;
+      // Up to date only if text AND a redaction list are both present.
+      if (cur && cur.sig === sig && cur.text != null && cur.redactions != null) return;
+    }
+    const hadPrior = !!(cur && cur.text != null);
+    const changed = hadPrior && cur.sig !== sig;
+    setSummaries(s => ({ ...s, [c.id]: { ...(s[c.id] || {}), loading: true } }));
+    (async () => {
+      const text = await genCaseSummary(c);
+      let redactions = text ? await findRedactions(text) : [];
+      // Belt-and-suspenders: always mask the names we already know for this case
+      // (contacts + the case display name), so a missed name never prints.
+      if (text) {
+        const known = [];
+        (c.contacts || []).forEach(p => {
+          if (p.name) { known.push(p.name); p.name.split(/\s+/).forEach(w => known.push(w)); }
+        });
+        if (c.name) c.name.split(/\s+/).forEach(w => known.push(w));
+        const generic = /^(family|household|the|and|&|mr|mrs|ms|dr|jr|sr|&amp;)$/i;
+        const knownClean = known.filter(w => w && w.replace(/[^a-z]/gi, '').length >= 2 && !generic.test(w.replace(/[^a-z]/gi, '')));
+        redactions = [...new Set([...(redactions || []), ...knownClean])];
+      }
+      setSummaries(s => ({
+        ...s,
+        [c.id]: { text, redactions, at: new Date().toISOString(), sig, loading: false },
+      }));
+      if (text && (force || changed)) logEvent(c.id, 'summary_generated', { manual: !!force });
+    })();
+  }, [logEvent]);
+
+  // Log sign-in once per session
+  React.useEffect(() => {
+    if (signedIn) {
+      setEvents(es => [{
+        id: 'e_signin_' + Date.now(),
+        caseId: null, at: new Date().toISOString(),
+        who: meId, kind: 'signed_in', detail: { email: (team.find(t => t.id === meId) || {}).email },
+      }, ...es]);
+    }
+  }, [signedIn]);
+
+  const me = team.find(t => t.id === meId);
+
+  // Counts per nav item
+  const counts = {
+    all:    cases.length,
+    active: cases.filter(c => c.status === 'active').length,
+    paused: cases.filter(c => c.status === 'paused').length,
+    closed: cases.filter(c => c.status === 'closed').length,
+  };
+
+  let filtered = cases;
+  if (nav === 'active') filtered = filtered.filter(c => c.status === 'active');
+  if (nav === 'paused') filtered = filtered.filter(c => c.status === 'paused');
+  if (nav === 'closed') filtered = filtered.filter(c => c.status === 'closed');
+  if (q) {
+    const qq = q.toLowerCase();
+    filtered = filtered.filter(c =>
+      c.name.toLowerCase().includes(qq) ||
+      c.caseNumber.toLowerCase().includes(qq) ||
+      c.notes.some(n => n.text.toLowerCase().includes(qq)) ||
+      c.tasks.some(t => t.text.toLowerCase().includes(qq)) ||
+      c.contacts.some(p => p.name.toLowerCase().includes(qq) || (p.email||'').toLowerCase().includes(qq) || (p.phone||'').includes(qq)) ||
+      c.careTeam.some(p => p.name.toLowerCase().includes(qq) || (p.email||'').toLowerCase().includes(qq) || (p.phone||'').includes(qq) || (p.role||'').toLowerCase().includes(qq))
+    );
+  }
+  filtered.sort((a,b) => new Date(b.lastActivity) - new Date(a.lastActivity));
+
+  const titleMap = {
+    all: 'All Cases',
+    active: 'Active Cases', paused: 'Paused', closed: 'Closed',
+  };
+
+  // ─── Actions ──────────────────────────────────────────
+  const stamp = () => new Date().toISOString();
+
+  const addNote = (cid, text) => {
+    setCases(cs => cs.map(c => c.id !== cid ? c : {
+      ...c,
+      notes: [{ id: 'n' + Date.now(), author: meId, date: stamp(), text }, ...c.notes],
+      lastActivity: stamp(),
+    }));
+    logEvent(cid, 'note_added', { preview: text.slice(0, 80) });
+  };
+  const updateCase = (cid, patch) => {
+    const prev = cases.find(c => c.id === cid);
+    setCases(cs => cs.map(c => c.id !== cid ? c : { ...c, ...patch, lastActivity: stamp() }));
+    if (!prev) return;
+    // Compute and log diff
+    if (patch.name !== undefined && patch.name !== prev.name) {
+      logEvent(cid, 'case_renamed', { from: prev.name, to: patch.name });
+    }
+    if (patch.status !== undefined && patch.status !== prev.status) {
+      logEvent(cid, 'status_changed', { from: prev.status, to: patch.status });
+    }
+    if (patch.careTeam !== undefined) {
+      const added   = patch.careTeam.filter(x => !prev.careTeam.includes(x));
+      const removed = prev.careTeam.filter(x => !patch.careTeam.includes(x));
+      added.forEach(m   => logEvent(cid, 'care_team_added',   { member: m }));
+      removed.forEach(m => logEvent(cid, 'care_team_removed', { member: m }));
+    }
+    if (patch.careTeamNotes !== undefined && patch.careTeamNotes !== prev.careTeamNotes) {
+      logEvent(cid, 'care_notes_edited', { preview: patch.careTeamNotes.slice(0, 80) });
+    }
+  };
+  const addTask = (cid, text, due) => {
+    setCases(cs => cs.map(c => c.id !== cid ? c : {
+      ...c, tasks: [...c.tasks, { id: 't' + Date.now(), text, done: false, assignee: meId, due: due || undefined }],
+      lastActivity: stamp(),
+    }));
+    logEvent(cid, 'task_added', { text });
+  };
+  const toggleTask = (cid, tid) => {
+    const c = cases.find(c => c.id === cid);
+    const t = c && c.tasks.find(t => t.id === tid);
+    if (!t) return;
+    setCases(cs => cs.map(c => c.id !== cid ? c : {
+      ...c,
+      tasks: c.tasks.map(t => t.id === tid ? { ...t, done: !t.done } : t),
+      lastActivity: stamp(),
+    }));
+    logEvent(cid, t.done ? 'task_reopened' : 'task_completed', { text: t.text });
+  };
+  const deleteTask = (cid, tid) => {
+    const c = cases.find(c => c.id === cid);
+    const t = c && c.tasks.find(t => t.id === tid);
+    setCases(cs => cs.map(c => c.id !== cid ? c : {
+      ...c, tasks: c.tasks.filter(t => t.id !== tid), lastActivity: stamp(),
+    }));
+    if (t) logEvent(cid, 'task_deleted', { text: t.text });
+  };
+  const addFile = (cid, file) => {
+    setCases(cs => cs.map(c => c.id !== cid ? c : {
+      ...c, files: [...c.files, { id: 'f' + Date.now(), ...file }],
+      lastActivity: stamp(),
+    }));
+    logEvent(cid, 'file_uploaded', { name: file.name, size: file.size });
+  };
+  const deleteFile = (cid, fid) => {
+    const c = cases.find(c => c.id === cid);
+    const f = c && c.files.find(f => f.id === fid);
+    setCases(cs => cs.map(c => c.id !== cid ? c : {
+      ...c, files: c.files.filter(f => f.id !== fid), lastActivity: stamp(),
+    }));
+    if (f) logEvent(cid, 'file_deleted', { name: f.name });
+  };
+  const createCase = ({ name, firstNote, contact }) => {
+    const num = 'C-' + String(17 + (cases.length - 8)).padStart(3, '0');
+    const id = 'c' + Date.now();
+    const contacts = contact && contact.name
+      ? [{ id: 'p_' + Date.now(), ...contact }]
+      : [];
+    const newCase = {
+      id, caseNumber: num, name, status: 'active',
+      contacts, careTeam: [],
+      opened: '2026-05-21', lastActivity: stamp(),
+      notes: firstNote.trim()
+        ? [{ id: 'n0', author: meId, date: stamp(), text: firstNote.trim() }]
+        : [],
+      tasks: [], files: [],
+    };
+    setCases(cs => [newCase, ...cs]);
+    logEvent(id, 'case_created', { name });
+    if (contacts[0]) logEvent(id, 'contact_added', { name: contacts[0].name });
+    if (firstNote.trim()) logEvent(id, 'note_added', { preview: firstNote.trim().slice(0, 80) });
+    setNewOpen(false);
+    setSelectedId(id);
+  };
+
+  // ─── Contacts (people we're helping) ─────────────────
+  const addContact = (cid, payload) => {
+    const id = 'p_' + Date.now();
+    setCases(cs => cs.map(c => c.id !== cid ? c
+      : { ...c, contacts: [...c.contacts, { id, ...payload }], lastActivity: stamp() }));
+    logEvent(cid, 'contact_added', { name: payload.name });
+  };
+  const editContact = (cid, pid, patch) => {
+    setCases(cs => cs.map(c => c.id !== cid ? c
+      : { ...c, contacts: c.contacts.map(p => p.id === pid ? { ...p, ...patch } : p), lastActivity: stamp() }));
+    logEvent(cid, 'contact_edited', { name: patch.name });
+  };
+  const removeContact = (cid, pid) => {
+    const c0 = cases.find(c => c.id === cid);
+    const p0 = c0 && c0.contacts.find(p => p.id === pid);
+    setCases(cs => cs.map(c => c.id !== cid ? c
+      : { ...c, contacts: c.contacts.filter(p => p.id !== pid), lastActivity: stamp() }));
+    if (p0) logEvent(cid, 'contact_removed', { name: p0.name });
+  };
+
+  // ─── Care Team (lay volunteers helping with this case) ───
+  const addCareTeam = (cid, payload) => {
+    const id = 'ct_' + Date.now();
+    setCases(cs => cs.map(c => c.id !== cid ? c
+      : { ...c, careTeam: [...c.careTeam, { id, ...payload }], lastActivity: stamp() }));
+    logEvent(cid, 'careteam_added', { name: payload.name });
+  };
+  const editCareTeam = (cid, pid, patch) => {
+    setCases(cs => cs.map(c => c.id !== cid ? c
+      : { ...c, careTeam: c.careTeam.map(p => p.id === pid ? { ...p, ...patch } : p), lastActivity: stamp() }));
+    logEvent(cid, 'careteam_edited', { name: patch.name });
+  };
+  const removeCareTeam = (cid, pid) => {
+    const c0 = cases.find(c => c.id === cid);
+    const p0 = c0 && c0.careTeam.find(p => p.id === pid);
+    setCases(cs => cs.map(c => c.id !== cid ? c
+      : { ...c, careTeam: c.careTeam.filter(p => p.id !== pid), lastActivity: stamp() }));
+    if (p0) logEvent(cid, 'careteam_removed', { name: p0.name });
+  };
+
+  const shareToGroupMe = (cid) => {
+    const c0 = cases.find(c => c.id === cid);
+    if (c0) logEvent(cid, 'shared_to_groupme', { caseNumber: c0.caseNumber, caseName: c0.name });
+  };
+
+  const addMember = ({ name, email, phone }) => {
+    const id = 'tm' + Date.now();
+    const initials = name.split(/\s+/).map(p => p[0]).slice(0,2).join('').toUpperCase();
+    const colors = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#84cc16','#ec4899'];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const newMember = {
+      id, name, email, phone, initials, color,
+      addedBy: meId, addedAt: new Date().toISOString().slice(0,10), lastLogin: null,
+    };
+    setTeam(t => [...t, newMember]);
+    logEvent(null, 'deacon_invited', { name, email });
+  };
+  const updateMember = (id, patch) => {
+    const prev = team.find(m => m.id === id);
+    setTeam(t => t.map(m => m.id === id ? { ...m, ...patch } : m));
+    if (prev) logEvent(null, 'deacon_edited', { name: prev.name });
+  };
+  const removeMember = (id) => {
+    const m = team.find(m => m.id === id);
+    setTeam(t => t.filter(m => m.id !== id));
+    if (m) logEvent(null, 'deacon_removed', { name: m.name });
+  };
+  const setTeamLeader = (id) => {
+    const newLeader = team.find(m => m.id === id);
+    const oldLeader = team.find(m => m.isLeader);
+    if (!newLeader || newLeader.isLeader) return;
+    setTeam(t => t.map(m => ({ ...m, isLeader: m.id === id })));
+    logEvent(null, 'team_leader_changed', {
+      from: oldLeader ? oldLeader.name : null,
+      to: newLeader.name,
+    });
+  };
+
+  if (!signedIn) return <LoginPage3 team={team} onLogin={(id) => {
+    setMeId(id);
+    setTeam(t => t.map(m => m.id === id ? { ...m, lastLogin: new Date().toISOString() } : m));
+    setSignedIn(true);
+  }} />;
+
+  const selected = selectedId ? cases.find(c => c.id === selectedId) : null;
+
+  let main;
+  if (selected) {
+    const caseEvents = events.filter(e => e.caseId === selected.id);
+    main = <CaseDetail3 c={selected} me={me} caseEvents={caseEvents} team={team} onBack={() => setSelectedId(null)}
+            onAddNote={addNote} onUpdate={updateCase}
+            onAddTask={addTask} onToggleTask={toggleTask} onDeleteTask={deleteTask}
+            onAddFile={addFile} onDeleteFile={deleteFile}
+            onAddContact={addContact} onEditContact={editContact} onRemoveContact={removeContact}
+            onAddCareTeam={addCareTeam} onEditCareTeam={editCareTeam} onRemoveCareTeam={removeCareTeam}
+            onShare={shareToGroupMe}
+            summaryEntry={summaries[selected.id]}
+            onEnsureSummary={ensureSummary}
+            onRefreshSummary={(c) => ensureSummary(c, true)}
+            onSelectCase={setSelectedId} />;
+  } else if (nav === 'report') {
+    main = <PrintPreview3 cases={cases} summaries={summaries} onEnsureSummary={ensureSummary} />;
+  } else if (nav === 'activity') {
+    main = <ActivityView3 events={events} cases={cases} team={team} onSelectCase={setSelectedId} />;
+  } else if (nav === 'members') {
+    main = <MembersView team={team} me={me}
+              onAddMember={addMember} onUpdateMember={updateMember}
+              onRemoveMember={removeMember} onSetLeader={setTeamLeader} />;
+  } else {
+    main = <CaseList3 cases={filtered} onSelect={setSelectedId}
+              title={titleMap[nav]} sub={`${filtered.length} ${filtered.length === 1 ? 'case' : 'cases'}`}
+              q={q} setQ={setQ} onNew={() => setNewOpen(true)} />;
+  }
+
+  return (
+    <div className="app">
+      <Sidebar3
+        active={selected ? null : nav}
+        onNav={(n) => { setNav(n); setSelectedId(null); }}
+        counts={counts}
+        onNew={() => setNewOpen(true)}
+        me={me}
+        onSignOut={() => setSignedIn(false)}
+        onSwitchMe={setMeId}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(v => !v)}
+      />
+      <main className="main">{main}</main>
+      {newOpen && <NewCase3 onClose={() => setNewOpen(false)} onCreate={createCase} me={me} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
