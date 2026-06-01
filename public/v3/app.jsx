@@ -141,14 +141,6 @@ function Sidebar3({ active, onNav, counts, onNew, me, onSignOut, onSwitchMe, col
             <Icon name="logOut" size={14} stroke={1.7} />
           </button>
         </div>
-        <div className="demo-switch">
-          <span>Demo as:</span>
-          <select value={me.id} onChange={e => onSwitchMe(e.target.value)}>
-            {TEAM.map(t => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
-        </div>
       </div>
     </aside>
   );

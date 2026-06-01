@@ -4,7 +4,7 @@
 // Deacons (system users): name, email, phone, color
 // One deacon is flagged isLeader: true at a time.
 const TEAM = [
-  { id: 'tm1', name: 'David Reed',     initials: 'DR', email: 'dreed@gmail.com',           phone: '(404) 555-0118', color: '#1e40af', addedBy: 'system', addedAt: '2026-01-10', isLeader: true, lastLogin: '2026-05-21T08:42:00' },
+  { id: 'tm1', name: 'David Reed',     initials: 'DR', email: 'dreed@gmail.com',           phone: '(404) 555-0118', color: '#1e40af', addedBy: 'system', addedAt: '2026-01-10', lastLogin: '2026-05-21T08:42:00' },
   { id: 'tm2', name: 'Sarah Pike',     initials: 'SP', email: 'sarah.pike@stvincents.com', phone: '(404) 555-0240', color: '#0f766e', addedBy: 'tm1',    addedAt: '2026-01-12', lastLogin: '2026-05-20T19:05:00' },
   { id: 'tm3', name: 'Marcus Hall',    initials: 'MH', email: 'mhall82@yahoo.com',         phone: '(770) 555-0359', color: '#b45309', addedBy: 'tm1',    addedAt: '2026-01-15', lastLogin: '2026-05-21T07:58:00' },
   { id: 'tm4', name: 'Anna Beckett',   initials: 'AB', email: 'anna.beckett@outlook.com',  phone: '(404) 555-0481', color: '#6d28d9', addedBy: 'tm1',    addedAt: '2026-01-18', lastLogin: '2026-05-20T14:22:00' },
@@ -13,7 +13,7 @@ const TEAM = [
   { id: 'tm7', name: 'Paul Mendez',    initials: 'PM', email: 'pmendez@bellsouth.net',     phone: '(770) 555-0703', color: '#4d7c0f', addedBy: 'tm1',    addedAt: '2026-02-14', lastLogin: '2026-05-19T12:00:00' },
   { id: 'tm8', name: 'Rachel Owens',   initials: 'RO', email: 'rachel@owensfamily.com',    phone: '(404) 555-0844', color: '#a21caf', addedBy: 'tm1',    addedAt: '2026-02-20', lastLogin: '2026-05-17T10:15:00' },
   { id: 'tm9', name: 'Ben Carver',     initials: 'BC', email: 'bcarver.atl@gmail.com',     phone: '(678) 555-0962', color: '#4338ca', addedBy: 'tm1',    addedAt: '2026-03-01', lastLogin: '2026-05-20T20:05:00' },
-  { id: 'tm10', name: 'Hunter Kennion', initials: 'HK', email: 'hunter@kennion.com',       phone: '',               color: '#0f766e', addedBy: 'tm1',    addedAt: '2026-06-01', lastLogin: null },
+  { id: 'tm10', name: 'Hunter Kennion', initials: 'HK', email: 'hunter@kennion.com',       phone: '',               color: '#0f766e', addedBy: 'system', addedAt: '2026-06-01', isLeader: true, lastLogin: null },
 ];
 const ME_ID = 'tm4';
 
