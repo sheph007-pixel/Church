@@ -1164,6 +1164,7 @@ function App() {
   const [nav, setNav] = React.useState('active');
   const [selectedId, setSelectedId] = React.useState(null);
   const [cases, setCases] = React.useState(CASES);
+  const [caseCounter, setCaseCounter] = React.useState(1);
   const [team, setTeam] = React.useState(TEAM);
   const [events, setEvents] = React.useState(() => seedEvents());
   const [q, setQ] = React.useState('');
@@ -1354,7 +1355,9 @@ function App() {
     if (f) logEvent(cid, 'file_deleted', { name: f.name });
   };
   const createCase = ({ name, firstNote, contact }) => {
-    const num = 'C-' + String(17 + (cases.length - 8)).padStart(3, '0');
+    const yy = new Date().getFullYear().toString().slice(-2);
+    const num = yy + '-' + String(caseCounter).padStart(3, '0');
+    setCaseCounter(n => n + 1);
     const id = 'c' + Date.now();
     const contacts = contact && contact.name
       ? [{ id: 'p_' + Date.now(), ...contact }]
@@ -1362,7 +1365,7 @@ function App() {
     const newCase = {
       id, caseNumber: num, name, status: 'active',
       contacts, careTeam: [],
-      opened: '2026-05-21', lastActivity: stamp(),
+      opened: new Date().toISOString().slice(0, 10), lastActivity: stamp(),
       notes: firstNote.trim()
         ? [{ id: 'n0', author: meId, date: stamp(), text: firstNote.trim() }]
         : [],

@@ -30,12 +30,13 @@ app.post('/api/ai/complete', async (req, res) => {
       }
     }
 
-    if (process.env.OPENAI_API_KEY) {
+    const openaiKey = process.env.OPENAI_API_KEY || process.env.openai;
+    if (openaiKey) {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Authorization': `Bearer ${openaiKey}`,
         },
         body: JSON.stringify({
           model: 'gpt-4o-mini',

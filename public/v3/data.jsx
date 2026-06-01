@@ -4,18 +4,11 @@
 // Deacons (system users): name, email, phone, color
 // One deacon is flagged isLeader: true at a time.
 const TEAM = [
-  { id: 'tm1', name: 'David Reed',     initials: 'DR', email: 'dreed@gmail.com',           phone: '(404) 555-0118', color: '#1e40af', addedBy: 'system', addedAt: '2026-01-10', lastLogin: '2026-05-21T08:42:00' },
-  { id: 'tm2', name: 'Sarah Pike',     initials: 'SP', email: 'sarah.pike@stvincents.com', phone: '(404) 555-0240', color: '#0f766e', addedBy: 'tm1',    addedAt: '2026-01-12', lastLogin: '2026-05-20T19:05:00' },
-  { id: 'tm3', name: 'Marcus Hall',    initials: 'MH', email: 'mhall82@yahoo.com',         phone: '(770) 555-0359', color: '#b45309', addedBy: 'tm1',    addedAt: '2026-01-15', lastLogin: '2026-05-21T07:58:00' },
-  { id: 'tm4', name: 'Anna Beckett',   initials: 'AB', email: 'anna.beckett@outlook.com',  phone: '(404) 555-0481', color: '#6d28d9', addedBy: 'tm1',    addedAt: '2026-01-18', lastLogin: '2026-05-20T14:22:00' },
-  { id: 'tm5', name: 'Tom Whitfield',  initials: 'TW', email: 'twhitfield@protonmail.com', phone: '(678) 555-0517', color: '#be123c', addedBy: 'tm1',    addedAt: '2026-01-22', lastLogin: '2026-05-18T16:10:00' },
-  { id: 'tm6', name: 'Grace Lin',      initials: 'GL', email: 'gracelin77@gmail.com',      phone: '(404) 555-0622', color: '#0e7490', addedBy: 'tm1',    addedAt: '2026-02-03', lastLogin: '2026-05-19T21:30:00' },
-  { id: 'tm7', name: 'Paul Mendez',    initials: 'PM', email: 'pmendez@bellsouth.net',     phone: '(770) 555-0703', color: '#4d7c0f', addedBy: 'tm1',    addedAt: '2026-02-14', lastLogin: '2026-05-19T12:00:00' },
-  { id: 'tm8', name: 'Rachel Owens',   initials: 'RO', email: 'rachel@owensfamily.com',    phone: '(404) 555-0844', color: '#a21caf', addedBy: 'tm1',    addedAt: '2026-02-20', lastLogin: '2026-05-17T10:15:00' },
-  { id: 'tm9', name: 'Ben Carver',     initials: 'BC', email: 'bcarver.atl@gmail.com',     phone: '(678) 555-0962', color: '#4338ca', addedBy: 'tm1',    addedAt: '2026-03-01', lastLogin: '2026-05-20T20:05:00' },
-  { id: 'tm10', name: 'Hunter Kennion', initials: 'HK', email: 'hunter@kennion.com',       phone: '',               color: '#0f766e', addedBy: 'system', addedAt: '2026-06-01', isLeader: true, lastLogin: null },
+  { id: 'tm10', name: 'Hunter Kennion', initials: 'HK', email: 'hunter@kennion.com',
+    phone: '', color: '#0f766e', addedBy: 'system', addedAt: '2026-06-01',
+    isLeader: true, lastLogin: null },
 ];
-const ME_ID = 'tm4';
+const ME_ID = 'tm10';
 
 // Faith PCA Internal Benevolence team private GroupMe chat
 // Deep-link to the chat for existing members (vs join_group, which is for invites).
@@ -27,178 +20,14 @@ const STATUSES = {
   closed: { label: 'Closed', color: '#71717a' },
 };
 
-const CASES = [
-  {
-    id: 'c1', caseNumber: 'C-014',
-    name: 'Alvarez Family',
-    status: 'active',
-    contacts: [
-      { id: 'p1', name: 'Maria Alvarez',  phone: '(404) 555-2103', email: 'malvarez.atl@gmail.com' },
-      { id: 'p2', name: 'Carlos Alvarez', phone: '(404) 555-2147', email: '' },
-    ],
-    careTeam: [
-      { id: 'ct1', name: 'Mark & Lisa Davis', phone: '(770) 555-1133', email: 'markdavis78@gmail.com', role: 'Small group · bringing meals Tuesdays' },
-      { id: 'ct2', name: 'Sue Henderson',     phone: '(404) 555-1492', email: 'suehenderson@gmail.com', role: 'Helping Maria with school pickup for the kids' },
-    ],
-    opened: '2026-05-08', lastActivity: '2026-05-20T14:22:00',
-    notes: [
-      { id: 'n1', author: 'tm4', date: '2026-05-20T14:22:00', text: "Met at their apartment. Carlos has two job interviews lined up next week — Amazon warehouse and a roofing crew. Landlord agreed to wait until May 31 if we can cover this month's rent ($1,850)." },
-      { id: 'n2', author: 'tm6', date: '2026-05-15T19:10:00', text: "Talked w/ Maria. She's anxious but composed. Grocery situation OK — she got a food box from Westside Pantry last Saturday. Main worry is rent + electric." },
-      { id: 'n3', author: 'tm1', date: '2026-05-10T09:00:00', text: "Pastor Mike referred this family after Sunday service. Carlos has been a member 6 years. Reached out to Anna & Grace to take lead." },
-    ],
-    tasks: [
-      { id: 't1', text: 'Confirm landlord acceptance of direct payment', done: true, assignee: 'tm4', due: '2026-05-18' },
-      { id: 't2', text: 'Disburse $1,850 to landlord by May 31', done: false, assignee: 'tm2', due: '2026-05-30' },
-      { id: 't3', text: 'Follow up after Carlos\'s Amazon interview', done: false, assignee: 'tm4', due: '2026-05-28' },
-    ],
-    files: [
-      { id: 'f1', name: 'May-rent-notice.pdf', size: '184 KB' },
-      { id: 'f2', name: 'lease-agreement.pdf', size: '1.2 MB' },
-    ],
-  },
-  {
-    id: 'c2', caseNumber: 'C-015',
-    name: 'Grace O.',
-    status: 'active',
-    contacts: [
-      { id: 'p1', name: 'Grace Okonkwo', phone: '(770) 555-3318', email: 'g.okonkwo@protonmail.com' },
-    ],
-    careTeam: [],
-    opened: '2026-05-19', lastActivity: '2026-05-21T08:30:00',
-    notes: [
-      { id: 'n1', author: 'tm3', date: '2026-05-21T08:30:00', text: "Caught up with Grace this morning. MRI scheduled June 4. She has the bill estimate from St. Joseph's. Asked if she'd be OK with us paying the hospital directly — yes, her preference. Bill is $2,400 deductible." },
-      { id: 'n2', author: 'tm3', date: '2026-05-19T18:45:00', text: "First conversation after small group. Grace shared a recent diagnosis privately and asked for prayer + help with the deductible. Currently between contracts. Stable housing, no other immediate needs." },
-    ],
-    tasks: [
-      { id: 't1', text: 'Add to June 2 deacon meeting agenda — $2,400 over threshold', done: true, assignee: 'tm1', due: '2026-05-22' },
-      { id: 't2', text: 'Confirm hospital can accept payment directly', done: false, assignee: 'tm3', due: '2026-05-28' },
-    ],
-    files: [{ id: 'f1', name: 'st-joseph-estimate.pdf', size: '212 KB' }],
-  },
-  {
-    id: 'c3', caseNumber: 'C-011',
-    name: 'Bennett Household',
-    status: 'active',
-    contacts: [
-      { id: 'p1', name: 'James Bennett', phone: '(404) 555-4419', email: 'jbennett.retired@gmail.com' },
-      { id: 'p2', name: 'Helen Bennett', phone: '(404) 555-4421', email: '' },
-    ],
-    careTeam: [
-      { id: 'ct1', name: 'Youth Group', phone: '', email: '', role: 'Did weatherization in March · contact via Anna' },
-    ],
-    opened: '2026-03-12', lastActivity: '2026-05-18T16:00:00',
-    notes: [
-      { id: 'n1', author: 'tm5', date: '2026-05-18T16:00:00', text: "Monthly check-in with James and Helen. April utility bill was manageable. James said the weatherization volunteers from the youth group made a real difference. No current ask." },
-      { id: 'n2', author: 'tm8', date: '2026-04-20T11:00:00', text: "Dropped off groceries. Helen mentioned she's taking on some online tutoring — extra ~$200/mo." },
-      { id: 'n3', author: 'tm5', date: '2026-03-15T14:30:00', text: "Paid Duke Energy + Piedmont Gas directly — $612 + $308. Both confirmed." },
-    ],
-    tasks: [
-      { id: 't1', text: 'June check-in visit', done: false, assignee: 'tm8', due: '2026-06-15' },
-    ],
-    files: [{ id: 'f1', name: 'duke-statement-feb.pdf', size: '88 KB' }],
-  },
-  {
-    id: 'c4', caseNumber: 'C-016',
-    name: 'Rebecca & Owen',
-    status: 'active',
-    contacts: [
-      { id: 'p1', name: 'Rebecca Thornton', phone: '(404) 555-5582', email: 'rebecca.t82@gmail.com' },
-    ],
-    careTeam: [
-      { id: 'ct1', name: 'Karen Liu', phone: '(404) 555-6611', email: 'karenliu.atl@gmail.com', role: "Women's ministry · weekly drop-offs (diapers, groceries)" },
-    ],
-    opened: '2026-05-14', lastActivity: '2026-05-19T12:00:00',
-    notes: [
-      { id: 'n1', author: 'tm7', date: '2026-05-19T12:00:00', text: "Sent her this week's $100 grocery card. SNAP interview scheduled for May 28." },
-      { id: 'n2', author: 'tm7', date: '2026-05-14T17:00:00', text: "Met Rebecca at the cafe near her apartment. Job interview at Target next Tuesday. She's resourceful and motivated, just need to bridge 6 weeks while SNAP paperwork clears." },
-    ],
-    tasks: [
-      { id: 't1', text: 'Weekly grocery card through end of June', done: false, assignee: 'tm7' },
-      { id: 't2', text: 'Check in after SNAP interview May 28', done: false, assignee: 'tm7', due: '2026-05-29' },
-    ],
-    files: [],
-  },
-  {
-    id: 'c5', caseNumber: 'C-013',
-    name: 'Park Family',
-    status: 'active',
-    contacts: [
-      { id: 'p1', name: 'Daniel Park',  phone: '(678) 555-7728', email: 'd.park.atl@gmail.com' },
-      { id: 'p2', name: 'Hye-Jin Park', phone: '(678) 555-7729', email: '' },
-    ],
-    careTeam: [],
-    opened: '2026-05-17', lastActivity: '2026-05-20T20:00:00',
-    notes: [
-      { id: 'n1', author: 'tm9', date: '2026-05-20T20:00:00', text: "Got the estimate from Brake & Tire on Glenwood — $1,200 for rebuilt transmission, 60-day labor warranty. Daniel says he can pay $200 himself if we cover the rest." },
-      { id: 'n2', author: 'tm9', date: '2026-05-17T15:00:00', text: "Daniel called me after worship. Car broke down Friday on the way home from work. He's been getting Uber rides ($45/night) — not sustainable. He works night shift as an orderly." },
-    ],
-    tasks: [
-      { id: 't1', text: 'Get team vote on $1,000 to repair shop', done: false, assignee: 'tm1', due: '2026-05-23' },
-    ],
-    files: [{ id: 'f1', name: 'brake-tire-estimate.jpg', size: '1.4 MB' }],
-  },
-  {
-    id: 'c6', caseNumber: 'C-010',
-    name: 'Williams Family',
-    status: 'closed',
-    contacts: [
-      { id: 'p1', name: 'Tasha Williams', phone: '(404) 555-8814', email: 'tasha.w.cna@gmail.com' },
-    ],
-    careTeam: [],
-    opened: '2026-02-04', lastActivity: '2026-04-30T14:00:00',
-    notes: [
-      { id: 'n1', author: 'tm6', date: '2026-04-30T14:00:00', text: "Closing case. Tasha is six weeks in at Mercy and stable. She sent a thank-you note for the team — taped on the office fridge :)" },
-      { id: 'n2', author: 'tm6', date: '2026-03-20T10:00:00', text: "Halfway through CNA program, at the top of her class. After-school care is going smoothly." },
-    ],
-    tasks: [], files: [],
-  },
-  {
-    id: 'c7', caseNumber: 'C-009',
-    name: 'Layla K.',
-    status: 'paused',
-    contacts: [
-      { id: 'p1', name: 'Layla Khoury', phone: '(770) 555-9923', email: 'lkhoury@me.com' },
-    ],
-    careTeam: [
-      { id: 'ct1', name: 'Sue Henderson', phone: '(404) 555-1492', email: 'suehenderson@gmail.com', role: "Women's ministry · helped connect Layla to support group" },
-    ],
-    opened: '2026-01-22', lastActivity: '2026-04-08T11:00:00',
-    notes: [
-      { id: 'n1', author: 'tm8', date: '2026-04-08T11:00:00', text: "Layla is doing better — new job at the library went permanent. She asked us to pause, said she wants to give back when she's able. Sweet conversation." },
-    ],
-    tasks: [], files: [],
-  },
-  {
-    id: 'c8', caseNumber: 'C-012',
-    name: 'Singh Family',
-    status: 'active',
-    contacts: [
-      { id: 'p1', name: 'Arjun Singh', phone: '(404) 555-1245', email: 'arjun.singh.atl@gmail.com' },
-      { id: 'p2', name: 'Priya Singh', phone: '(404) 555-1246', email: 'priyasingh82@gmail.com' },
-    ],
-    careTeam: [
-      { id: 'ct1', name: 'Pastor Tom Reilly', phone: '(404) 555-9001', email: 'pastortom@faith-pca.org', role: 'Monthly pastoral check-ins' },
-      { id: 'ct2', name: 'Vivek & Anjali Rao', phone: '(770) 555-2284', email: 'vivekrao.atl@gmail.com', role: 'Friends from India · driving Priya to appointments' },
-    ],
-    opened: '2026-04-30', lastActivity: '2026-05-19T09:00:00',
-    notes: [
-      { id: 'n1', author: 'tm4', date: '2026-05-19T09:00:00', text: "Visited at their home. Arjun was apologetic about asking — he's been a deacon at our sister church in Charlotte. Reassured him. Priya in good spirits, just tired. Surgery scheduled June 18." },
-      { id: 'n2', author: 'tm2', date: '2026-05-02T13:00:00', text: "Confirmed insurance numbers with Priya. $3,200 out-of-pocket for gallbladder surgery, family has $1,000 saved. Hospital will accept payment directly from us." },
-    ],
-    tasks: [
-      { id: 't1', text: 'Add to June 2 deacon agenda — $2,200', done: true, assignee: 'tm1' },
-      { id: 't2', text: 'Confirm with hospital after deacon approval', done: false, assignee: 'tm2', due: '2026-06-03' },
-    ],
-    files: [{ id: 'f1', name: 'surgery-estimate.pdf', size: '156 KB' }],
-  },
-];
+const CASES = [];
 
 const fmt3 = {
   date: (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
   dateFull: (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
   dateTime: (iso) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }).replace(/,/g, '').replace(/ (\d?\d:\d\d)/, ' · $1'),
   relative: (iso) => {
-    const now = new Date('2026-05-21T12:00:00');
+    const now = new Date();
     const d = new Date(iso);
     const diff = Math.floor((now - d) / 86400000);
     if (diff < 1) {
