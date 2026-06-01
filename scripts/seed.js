@@ -2,7 +2,7 @@
 // Safe to call multiple times: skips if data already exists.
 
 const TEAM = [
-  { id: 'tm10',  name: 'Hunter Kennion', initials: 'HK', email: 'hunter@kennion.com',
+  { id: 'tm10',  name: 'Hunter Shepherd', initials: 'HS', email: '',
     phone: '', color: '#0f766e', addedBy: 'system', addedAt: '2024-07-01',
     isLeader: true, lastLogin: null },
   { id: 'tm_ts', name: 'Timothy Smith',  initials: 'TS', email: '',

@@ -259,7 +259,7 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
                     </span>
                   )}
                 </div>
-                <div className="row-time">{fmt3.relative(c.lastActivity)}</div>
+                <div className="row-time">{fmt3.dateShort(c.lastActivity)}</div>
               </button>
             );
           })}

@@ -1212,7 +1212,7 @@
 // Shared team access code. Everyone uses the same code; the email
 // is what identifies WHO you are (and gates access — must be on the team).
 const ACCESS_CODE = '4601';
-const APP_VERSION = 'v1.7 · Jun 1 2026';
+const APP_VERSION = 'v1.8 · Jun 1 2026';
 
 // Migrate legacy YY-NNN case numbers → permanent 4-digit IDs, and fix any bad dates.
 const CASE_NUM_MAP = {
@@ -1220,6 +1220,12 @@ const CASE_NUM_MAP = {
   'c_24005':'8413','c_24006':'3756','c_25001':'6290','c_25002':'1847',
   'c_25003':'9053','c_25004':'4612','c_25005':'7825','c_25006':'3491',
 };
+function migrateTeam(team) {
+  if (!Array.isArray(team)) return team;
+  return team.map(m => m.id === 'tm10' && m.name === 'Hunter Kennion'
+    ? { ...m, name: 'Hunter Shepherd', initials: 'HS' }
+    : m);
+}
 function migrateCases(cases) {
   if (!Array.isArray(cases)) return cases;
   return cases.map(c => {
@@ -1339,7 +1345,7 @@ function App() {
             const { state } = await resp.json();
             if (state) {
               if (Array.isArray(state.cases)) setCases(migrateCases(state.cases));
-              if (Array.isArray(state.team)) setTeam(state.team);
+              if (Array.isArray(state.team)) setTeam(migrateTeam(state.team));
               if (Array.isArray(state.events)) setEvents(state.events);
             }
           }
@@ -1447,7 +1453,7 @@ function App() {
           const { state } = await resp.json();
           if (state) {
             if (Array.isArray(state.cases)) setCases(migrateCases(state.cases));
-            if (Array.isArray(state.team)) setTeam(state.team);
+            if (Array.isArray(state.team)) setTeam(migrateTeam(state.team));
             if (Array.isArray(state.events)) setEvents(state.events);
           }
         }
@@ -1677,7 +1683,7 @@ function App() {
         const { state } = await resp.json();
         if (state) {
           if (Array.isArray(state.cases)) setCases(migrateCases(state.cases));
-          if (Array.isArray(state.team)) setTeam(state.team);
+          if (Array.isArray(state.team)) setTeam(migrateTeam(state.team));
           if (Array.isArray(state.events)) setEvents(state.events);
         }
       }
@@ -1729,7 +1735,7 @@ function App() {
                     const { state } = await r2.json();
                     if (state) {
                       if (Array.isArray(state.cases)) setCases(state.cases);
-                      if (Array.isArray(state.team)) setTeam(state.team);
+                      if (Array.isArray(state.team)) setTeam(migrateTeam(state.team));
                       if (Array.isArray(state.events)) setEvents(state.events);
                             }
                     setSeedStatus('done');

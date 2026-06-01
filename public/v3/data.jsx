@@ -4,7 +4,7 @@
 // Deacons (system users): name, email, phone, color
 // One deacon is flagged isLeader: true at a time.
 const TEAM = [
-  { id: 'tm10', name: 'Hunter Kennion', initials: 'HK', email: 'hunter@kennion.com',
+  { id: 'tm10', name: 'Hunter Shepherd', initials: 'HS', email: '',
     phone: '', color: '#0f766e', addedBy: 'system', addedAt: '2026-06-01',
     isLeader: true, lastLogin: null },
 ];
@@ -26,6 +26,12 @@ const fmt3 = {
   date: (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
   dateFull: (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
   dateTime: (iso) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }).replace(/,/g, '').replace(/ (\d?\d:\d\d)/, ' · $1'),
+  dateShort: (iso) => {
+    const d = new Date(iso);
+    return String(d.getMonth() + 1).padStart(2, '0') + '/' +
+           String(d.getDate()).padStart(2, '0') + '/' +
+           String(d.getFullYear()).slice(-2);
+  },
   relative: (iso) => {
     const now = new Date();
     const d = new Date(iso);

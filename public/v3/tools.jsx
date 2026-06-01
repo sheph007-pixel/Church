@@ -238,7 +238,7 @@ function ActivityView3({ events, cases, team, onSelectCase }) {
           <div className="section-label">{fmt3.dateFull(d + 'T00:00:00')}</div>
           <ul className="activity-list">
             {byDate[d].map(e => {
-              const who = team.find(t => t.id === e.who) || { name: 'Unknown', initials: '?', color: '#999' };
+              const who = team.find(t => t.id === e.who) || { name: 'Admin', initials: 'AD', color: '#64748b' };
               const kind = EVENT_KINDS[e.kind] || { label: e.kind, icon: 'note' };
               const c = e.caseId ? cases.find(c => c.id === e.caseId) : null;
               const detail = eventDetailText(e);
