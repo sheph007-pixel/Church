@@ -224,7 +224,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onUpdate, onA
         </section>
 
         {/* Files */}
-        <section className="section">
+        <section className="section section-files">
           <div className="section-head">
             <h2>Files <span className="section-count">{c.files.length}</span></h2>
           </div>
@@ -257,7 +257,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onUpdate, onA
         </section>
 
         {/* History — audit log for this case */}
-        <section className="section">
+        <section className="section section-history">
           <div className="section-head">
             <h2>
               History

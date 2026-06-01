@@ -1036,7 +1036,7 @@
                        to   { opacity: 1; transform: translateY(0) scale(1) } }
 
   /* ─── Responsive ────────────────────────────────────── */
-  @media (max-width: 900px) {
+  @media (min-width: 769px) and (max-width: 900px) {
     .app { grid-template-columns: 1fr; }
     .sidebar {
       position: fixed; top: 0; left: 0; right: 0; z-index: 50;
@@ -1064,6 +1064,64 @@
     .hero-title { font-size: 26px; }
     .paper { padding: 28px 22px; }
     .member-meta { display: none; }
+    .mobile-nav { display: flex; }
+    .main { padding-bottom: 60px; }
+    .detail { padding-bottom: 60px; }
+    .case-list, .tool-view { padding-bottom: 80px; }
+  }
+
+  /* ─── Phone (≤768px) ────────────────────────────────── */
+  .mobile-header {
+    display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 60;
+    height: 52px; background: var(--bg); border-bottom: 1px solid var(--border);
+    align-items: center; padding: 0 14px; gap: 12px;
+  }
+  .quick-note-bar {
+    display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 55;
+    background: var(--bg); border-top: 1px solid var(--border); padding: 10px 14px;
+    gap: 10px; align-items: flex-end;
+  }
+  .quick-note-input {
+    flex: 1; resize: none; border: 1px solid var(--border); border-radius: 10px;
+    padding: 9px 12px; font-size: 15px; font-family: var(--font); outline: none;
+    min-height: 40px; max-height: 120px; background: var(--bg-card);
+  }
+  .quick-note-input:focus { border-color: var(--primary); }
+  .mobile-fab {
+    display: none; position: fixed; bottom: 24px; right: 22px; z-index: 50;
+    width: 54px; height: 54px; border-radius: 99px; background: var(--primary); color: #fff;
+    align-items: center; justify-content: center;
+    box-shadow: 0 4px 16px rgba(15,36,71,0.32); border: none; cursor: pointer;
+    transition: background 120ms;
+  }
+  .mobile-fab:active { background: var(--primary-deep); }
+
+  @media (max-width: 768px) {
+    .sidebar, .mobile-nav { display: none !important; }
+    .mobile-header { display: flex; }
+    .app { display: block; }
+    .main { padding-top: 52px; padding-bottom: 80px; }
+
+    /* Case list */
+    .case-list { padding: 16px; }
+    .list-head { flex-direction: column; gap: 12px; }
+    .head-actions .btn { display: none; }
+    .search { flex: 1; width: auto; }
+    .row { grid-template-columns: 56px 1fr; gap: 12px; padding: 14px 6px; }
+    .row-meta, .row-time { display: none; }
+
+    /* Case detail: single column, contacts float above body */
+    .detail { display: flex; flex-direction: column; height: auto; min-height: 100vh; }
+    .detail-head { display: none; }
+    .detail-meta { order: -1; border-left: none; border-bottom: 1px solid var(--border); border-top: none; }
+    .detail-body { padding: 16px; }
+
+    /* Desktop-only sections hidden on phone */
+    .section-files, .section-history { display: none; }
+
+    /* New mobile elements */
+    .mobile-fab { display: flex; }
+    .quick-note-bar { display: flex; }
   }
 
   @media print {
@@ -1085,7 +1143,7 @@
     }
   }
 
-  /* ─── Mobile bottom nav ─────────────────────────────── */
+  /* ─── Mobile bottom nav (tablet 769-900px only) ─────── */
   .mobile-nav {
     display: none;
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
@@ -1110,12 +1168,6 @@
     transition: background 120ms;
   }
   .mobile-nav-plus:hover { background: var(--primary-deep); }
-  @media (max-width: 900px) {
-    .mobile-nav { display: flex; }
-    .main { padding-bottom: 60px; }
-    .detail { padding-bottom: 60px; }
-    .case-list, .tool-view { padding-bottom: 80px; }
-  }
   .app-loading {
     min-height: 100vh; display: flex; align-items: center; justify-content: center;
     background: radial-gradient(ellipse at 50% 20%, #f6f5f2 0%, #ebe9e4 100%);
@@ -1195,6 +1247,29 @@ function LoginPage3({ team, onLogin }) {
   );
 }
 
+function MobileHeader({ selectedCase, onBack, caseCount, syncing }) {
+  if (selectedCase) return (
+    <div className="mobile-header">
+      <button className="icon-btn" style={{ marginLeft: -4 }} onClick={onBack}>
+        <Icon name="chevronLeft" size={20} stroke={2} />
+      </button>
+      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+        <div style={{ fontWeight: 600, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {selectedCase.caseNumber} · {selectedCase.name}
+        </div>
+      </div>
+      <StatusPill3 status={selectedCase.status} />
+    </div>
+  );
+  return (
+    <div className="mobile-header">
+      <div style={{ fontWeight: 600, fontSize: 15, flex: 1 }}>Internal Benevolence</div>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{caseCount} active</div>
+      {syncing && <Icon name="refresh" size={14} stroke={1.8} className="spin" />}
+    </div>
+  );
+}
+
 function App() {
   const [signedIn, setSignedIn] = React.useState(false);
   const [meId, setMeId] = React.useState(ME_ID);
@@ -1206,6 +1281,8 @@ function App() {
   const [events, setEvents] = React.useState(() => seedEvents());
   const [q, setQ] = React.useState('');
   const [newOpen, setNewOpen] = React.useState(false);
+  const [quickNote, setQuickNote] = React.useState('');
+  const [syncing, setSyncing] = React.useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(
     () => localStorage.getItem('ib_sidebar_collapsed') === '1'
   );
@@ -1322,6 +1399,29 @@ function App() {
       }).catch(() => {});
     }, 1500);
   }, [cases, team, events, caseCounter, signedIn]);
+
+  React.useEffect(() => {
+    const reload = async () => {
+      if (!signedIn) return;
+      setSyncing(true);
+      try {
+        const resp = await fetch('/api/state');
+        if (resp.ok) {
+          const { state } = await resp.json();
+          if (state) {
+            if (Array.isArray(state.cases)) setCases(state.cases);
+            if (Array.isArray(state.team)) setTeam(state.team);
+            if (Array.isArray(state.events)) setEvents(state.events);
+            if (typeof state.caseCounter === 'number') setCaseCounter(state.caseCounter);
+          }
+        }
+      } catch (e) {}
+      setSyncing(false);
+    };
+    const handler = () => { if (document.visibilityState === 'visible') reload(); };
+    document.addEventListener('visibilitychange', handler);
+    return () => document.removeEventListener('visibilitychange', handler);
+  }, [signedIn]);
 
   const me = team.find(t => t.id === meId);
 
@@ -1583,6 +1683,8 @@ function App() {
 
   return (
     <div className="app">
+      <MobileHeader selectedCase={selected} onBack={() => setSelectedId(null)}
+                    caseCount={counts.active} syncing={syncing} />
       <Sidebar3
         active={selected ? null : nav}
         onNav={(n) => { setNav(n); setSelectedId(null); }}
@@ -1595,6 +1697,24 @@ function App() {
         onToggleCollapse={() => setSidebarCollapsed(v => !v)}
       />
       <main className="main">{main}</main>
+      {selected && (
+        <div className="quick-note-bar">
+          <textarea className="quick-note-input" rows={1} placeholder="Add a note…"
+            value={quickNote}
+            onChange={e => setQuickNote(e.target.value)}
+            onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+          />
+          <Btn3 variant="primary" size="sm" disabled={!quickNote.trim()}
+            onClick={() => { addNote(selectedId, quickNote.trim()); setQuickNote(''); }}>
+            Save
+          </Btn3>
+        </div>
+      )}
+      {!selected && (
+        <button className="mobile-fab" onClick={() => setNewOpen(true)}>
+          <Icon name="plus" size={24} stroke={2.2} />
+        </button>
+      )}
       <nav className="mobile-nav">
         <button className={'mobile-nav-item' + (!selected && (nav === 'active' || nav === 'all' || nav === 'paused' || nav === 'closed') ? ' active' : '')}
                 onClick={() => { setSelectedId(null); setNav('active'); }}>
