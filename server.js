@@ -1,9 +1,50 @@
 const express = require('express');
 const path = require('path');
+const { Pool } = require('pg');
 
 const app = express();
-app.use(express.json({ limit: '50kb' }));
+app.use(express.json({ limit: '5mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// PostgreSQL state persistence
+const pool = process.env.DATABASE_URL ? new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+}) : null;
+
+if (pool) {
+  pool.query(`CREATE TABLE IF NOT EXISTS app_state (
+    id TEXT PRIMARY KEY DEFAULT 'singleton',
+    state JSONB NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`).catch(e => console.error('DB init:', e.message));
+}
+
+app.get('/api/state', async (req, res) => {
+  if (!pool) return res.json({ state: null });
+  try {
+    const { rows } = await pool.query("SELECT state FROM app_state WHERE id = 'singleton'");
+    res.json({ state: rows[0] ? rows[0].state : null });
+  } catch (e) {
+    console.error('DB read error:', e.message);
+    res.json({ state: null });
+  }
+});
+
+app.post('/api/state', async (req, res) => {
+  if (!pool) return res.json({ ok: false });
+  try {
+    await pool.query(
+      `INSERT INTO app_state (id, state) VALUES ('singleton', $1)
+       ON CONFLICT (id) DO UPDATE SET state = $1, updated_at = NOW()`,
+      [req.body]
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('DB write error:', e.message);
+    res.status(500).json({ ok: false });
+  }
+});
 
 app.post('/api/ai/complete', async (req, res) => {
   const { prompt } = req.body;

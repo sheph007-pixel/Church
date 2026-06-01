@@ -1084,6 +1084,43 @@
       background: #0f2447 !important;
     }
   }
+
+  /* ─── Mobile bottom nav ─────────────────────────────── */
+  .mobile-nav {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+    height: 60px; background: var(--bg);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -2px 12px rgba(15,36,71,0.06);
+    align-items: center; justify-content: space-around;
+  }
+  .mobile-nav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 3px; padding: 6px 4px;
+    background: none; border: none; cursor: pointer;
+    color: var(--text-faint); font-size: 10px; font-weight: 500;
+    font-family: var(--font); min-height: 44px; transition: color 120ms;
+  }
+  .mobile-nav-item.active { color: var(--primary); }
+  .mobile-nav-plus {
+    width: 46px; height: 46px; border-radius: 99px;
+    background: var(--primary); color: #fff; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 10px rgba(15,36,71,0.28);
+    transition: background 120ms;
+  }
+  .mobile-nav-plus:hover { background: var(--primary-deep); }
+  @media (max-width: 900px) {
+    .mobile-nav { display: flex; }
+    .main { padding-bottom: 60px; }
+    .detail { padding-bottom: 60px; }
+    .case-list, .tool-view { padding-bottom: 80px; }
+  }
+  .app-loading {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at 50% 20%, #f6f5f2 0%, #ebe9e4 100%);
+    font-size: 14px; color: var(--text-muted);
+  }
 </style>
 </head>
 <body>
@@ -1176,6 +1213,30 @@ function App() {
     localStorage.setItem('ib_sidebar_collapsed', sidebarCollapsed ? '1' : '0');
   }, [sidebarCollapsed]);
 
+  const [dbLoading, setDbLoading] = React.useState(true);
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const sess = JSON.parse(localStorage.getItem('ib_session') || 'null');
+        if (sess && sess.meId) {
+          const resp = await fetch('/api/state');
+          if (resp.ok) {
+            const { state } = await resp.json();
+            if (state) {
+              if (Array.isArray(state.cases)) setCases(state.cases);
+              if (Array.isArray(state.team)) setTeam(state.team);
+              if (Array.isArray(state.events)) setEvents(state.events);
+              if (typeof state.caseCounter === 'number') setCaseCounter(state.caseCounter);
+            }
+          }
+          setMeId(sess.meId);
+          setSignedIn(true);
+        }
+      } catch (e) {}
+      setDbLoading(false);
+    })();
+  }, []);
+
   // ── System-generated summaries ───────────────────────
   // Stored statically per case: { text, redacted, at, sig, loading }.
   // Regenerated only when a note/task changes (sig change) or manual refresh.
@@ -1248,6 +1309,19 @@ function App() {
       }, ...es]);
     }
   }, [signedIn]);
+
+  const saveTimer = React.useRef(null);
+  React.useEffect(() => {
+    if (!signedIn) return;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      fetch('/api/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cases, team, events, caseCounter }),
+      }).catch(() => {});
+    }, 1500);
+  }, [cases, team, events, caseCounter, signedIn]);
 
   const me = team.find(t => t.id === meId);
 
@@ -1457,7 +1531,21 @@ function App() {
     });
   };
 
-  if (!signedIn) return <LoginPage3 team={team} onLogin={(id) => {
+  if (dbLoading) return <div className="app-loading">Loading…</div>;
+  if (!signedIn) return <LoginPage3 team={team} onLogin={async (id) => {
+    try {
+      const resp = await fetch('/api/state');
+      if (resp.ok) {
+        const { state } = await resp.json();
+        if (state) {
+          if (Array.isArray(state.cases)) setCases(state.cases);
+          if (Array.isArray(state.team)) setTeam(state.team);
+          if (Array.isArray(state.events)) setEvents(state.events);
+          if (typeof state.caseCounter === 'number') setCaseCounter(state.caseCounter);
+        }
+      }
+    } catch (e) {}
+    localStorage.setItem('ib_session', JSON.stringify({ meId: id, at: new Date().toISOString() }));
     setMeId(id);
     setTeam(t => t.map(m => m.id === id ? { ...m, lastLogin: new Date().toISOString() } : m));
     setSignedIn(true);
@@ -1501,12 +1589,37 @@ function App() {
         counts={counts}
         onNew={() => setNewOpen(true)}
         me={me}
-        onSignOut={() => setSignedIn(false)}
+        onSignOut={() => { localStorage.removeItem('ib_session'); setSignedIn(false); }}
         onSwitchMe={setMeId}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(v => !v)}
       />
       <main className="main">{main}</main>
+      <nav className="mobile-nav">
+        <button className={'mobile-nav-item' + (!selected && (nav === 'active' || nav === 'all' || nav === 'paused' || nav === 'closed') ? ' active' : '')}
+                onClick={() => { setSelectedId(null); setNav('active'); }}>
+          <Icon name="folder" size={20} stroke={1.7} />
+          <span>Cases</span>
+        </button>
+        <button className={'mobile-nav-item' + (!selected && nav === 'activity' ? ' active' : '')}
+                onClick={() => { setSelectedId(null); setNav('activity'); }}>
+          <Icon name="history" size={20} stroke={1.7} />
+          <span>Activity</span>
+        </button>
+        <button className="mobile-nav-item" style={{ flex: '0 0 64px' }} onClick={() => setNewOpen(true)}>
+          <div className="mobile-nav-plus"><Icon name="plus" size={22} stroke={2.2} /></div>
+        </button>
+        <button className={'mobile-nav-item' + (!selected && nav === 'members' ? ' active' : '')}
+                onClick={() => { setSelectedId(null); setNav('members'); }}>
+          <Icon name="users" size={20} stroke={1.7} />
+          <span>Deacons</span>
+        </button>
+        <button className={'mobile-nav-item' + (!selected && nav === 'report' ? ' active' : '')}
+                onClick={() => { setSelectedId(null); setNav('report'); }}>
+          <Icon name="print" size={20} stroke={1.7} />
+          <span>Report</span>
+        </button>
+      </nav>
       {newOpen && <NewCase3 onClose={() => setNewOpen(false)} onCreate={createCase} me={me} />}
     </div>
   );
