@@ -163,6 +163,60 @@ app.get('/api/patch-v2', async (req, res) => {
   }
 });
 
+// Patch v3 — fix 25-006 date (2026→2025) + correct Amanda Jones description
+app.get('/api/patch-v3', async (req, res) => {
+  if (!pool) return res.status(503).json({ error: 'No database' });
+  try {
+    const { rows } = await pool.query("SELECT state FROM app_state WHERE id = 'singleton'");
+    if (!rows[0]) return res.status(404).json({ error: 'No state in DB' });
+
+    const state = JSON.parse(JSON.stringify(rows[0].state));
+    const changes = [];
+
+    // Fix 1: 25-006 — force all dates to 2025-08-15
+    const c25006 = state.cases.find(c => c.caseNumber === '25-006');
+    if (c25006) {
+      c25006.opened = '2025-08-15';
+      c25006.lastActivity = '2025-08-15T12:00:00.000Z';
+      c25006.notes.forEach(n => { n.date = '2025-08-15T12:00:00.000Z'; });
+      changes.push('Fixed 25-006 dates → 2025-08-15');
+    }
+
+    // Fix 2: 25-002 Amanda Jones — replace April 16 note with accurate description
+    const amanda = state.cases.find(c => c.caseNumber === '25-002');
+    if (amanda) {
+      const note = amanda.notes.find(n => n.id === 'n_25002_1');
+      if (note) {
+        note.text = 'Single mom, two kids, regular attending member. Care team: Randal Snook, Amber Peterson, Keith Belcher. Approved $1,405 health insurance premium plus $300 Walmart gift card (Mar 26). Septic work approved across Mar 31 and Apr 16: pump-out $631, mini excavator access $850, mower repair $192, totaling $1,673.';
+        changes.push('Updated Amanda Jones (25-002) April 16 note with accurate description');
+      }
+    }
+
+    await pool.query(
+      `INSERT INTO app_state (id, state) VALUES ('singleton', $1)
+       ON CONFLICT (id) DO UPDATE SET state = $1, updated_at = NOW()`,
+      [state]
+    );
+
+    // Return verification data sorted by lastActivity so user can confirm sort order
+    const sorted = [...state.cases].sort((a, b) => new Date(b.lastActivity) - new Date(a.lastActivity));
+    res.json({
+      ok: true,
+      changes,
+      totalCases: state.cases.length,
+      sortedByActivity: sorted.map(c => ({
+        caseNumber: c.caseNumber,
+        name: c.name,
+        status: c.status,
+        lastActivity: c.lastActivity,
+      })),
+    });
+  } catch (e) {
+    console.error('Patch-v3 error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/ai/complete', async (req, res) => {
   const { prompt } = req.body;
   if (!prompt) return res.status(400).json({ error: 'No prompt' });
