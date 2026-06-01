@@ -50,9 +50,10 @@ app.post('/api/state', async (req, res) => {
 app.get('/api/seed', async (req, res) => {
   if (!pool) return res.status(503).json({ error: 'No database configured' });
   try {
-    const { rows } = await pool.query("SELECT id FROM app_state WHERE id = 'singleton'");
-    if (rows.length > 0) {
-      return res.json({ ok: false, message: 'Database already has data. Delete the row in app_state to re-seed.' });
+    const { rows } = await pool.query("SELECT state FROM app_state WHERE id = 'singleton'");
+    const existingCases = rows[0] && rows[0].state && rows[0].state.cases;
+    if (Array.isArray(existingCases) && existingCases.length > 0) {
+      return res.json({ ok: false, message: 'Cases already exist — skipping seed.' });
     }
     const { STATE } = require('./scripts/seed.js');
     await pool.query(
