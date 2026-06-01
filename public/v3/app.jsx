@@ -152,6 +152,36 @@ function Sidebar3({ active, onNav, counts, onNew, me, onSignOut, onSwitchMe, col
 // ─── Case list ──────────────────────────────────────────
 function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
   const [seedStatus, setSeedStatus] = React.useState('idle');
+  const [sortKey, setSortKey] = React.useState('date');
+  const [sortDir, setSortDir] = React.useState('desc');
+
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir(key === 'date' ? 'desc' : 'asc');
+    }
+  };
+
+  const sorted = [...cases].sort((a, b) => {
+    let cmp;
+    if (sortKey === 'date') cmp = new Date(a.lastActivity) - new Date(b.lastActivity);
+    else if (sortKey === 'name') cmp = a.name.localeCompare(b.name);
+    else cmp = a.caseNumber.localeCompare(b.caseNumber);
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+
+  const SortBtn = ({ k, label }) => (
+    <button className={'sort-btn' + (sortKey === k ? ' active' : '')} onClick={() => handleSort(k)}>
+      {label}
+      {sortKey === k && (
+        <Icon name="chevronDown" size={11} stroke={2.2}
+          style={{ transform: sortDir === 'asc' ? 'scaleY(-1)' : 'none', transition: 'transform 120ms' }} />
+      )}
+    </button>
+  );
+
   return (
     <div className="case-list">
       <div className="list-head">
@@ -166,6 +196,12 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
           </div>
           <Btn3 variant="primary" icon="plus" onClick={onNew}>New Case</Btn3>
         </div>
+      </div>
+      <div className="sort-bar">
+        <span className="sort-bar-label">Sort</span>
+        <SortBtn k="date" label="Date" />
+        <SortBtn k="name" label="Name" />
+        <SortBtn k="num"  label="#" />
       </div>
 
       {onImport && seedStatus !== 'done' && (
@@ -183,7 +219,7 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
         </div>
       )}
 
-      {cases.length === 0 ? (
+      {sorted.length === 0 ? (
         <div className="empty">
           <Icon name="folder" size={22} stroke={1.5} />
           <div className="empty-title">No Cases Here</div>
@@ -191,7 +227,7 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
         </div>
       ) : (
         <div className="rows">
-          {cases.map(c => {
+          {sorted.map(c => {
             const latest = c.notes[0];
             const openTasks = c.tasks.filter(t => !t.done).length;
             return (

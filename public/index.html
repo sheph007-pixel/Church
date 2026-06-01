@@ -212,8 +212,21 @@
 
   .list-head {
     display: flex; align-items: flex-start; justify-content: space-between;
-    gap: 24px; margin-bottom: 24px;
+    gap: 24px; margin-bottom: 16px;
   }
+  .sort-bar {
+    display: flex; align-items: center; gap: 3px;
+    margin-bottom: 16px;
+  }
+  .sort-bar-label { font-size: 11.5px; color: var(--text-faint); margin-right: 4px; letter-spacing: 0.02em; text-transform: uppercase; }
+  .sort-btn {
+    display: inline-flex; align-items: center; gap: 3px;
+    background: none; border: 1px solid transparent; border-radius: 6px;
+    padding: 3px 9px; font-size: 12px; color: var(--text-muted);
+    cursor: pointer; font-family: var(--font); transition: all 80ms;
+  }
+  .sort-btn:hover { background: var(--bg-hover); color: var(--text); }
+  .sort-btn.active { background: var(--bg-card, #fff); border-color: var(--border); color: var(--text); font-weight: 600; }
   .page-title { font-size: 26px; font-weight: 700; letter-spacing: -0.5px;
     margin: 0; line-height: 1.1; color: var(--text); font-family: var(--font-disp); }
   .page-sub { font-size: 13px; color: var(--text-muted); margin-top: 5px; line-height: 1.4; }
@@ -1450,7 +1463,7 @@ function App() {
       c.careTeam.some(p => p.name.toLowerCase().includes(qq) || (p.email||'').toLowerCase().includes(qq) || (p.phone||'').includes(qq) || (p.role||'').toLowerCase().includes(qq))
     );
   }
-  filtered.sort((a,b) => new Date(b.lastActivity) - new Date(a.lastActivity));
+  // Sorting is handled inside CaseList3 so the user can change it per-view.
 
   const titleMap = {
     all: 'All Cases',
