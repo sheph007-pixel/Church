@@ -46,6 +46,26 @@ app.post('/api/state', async (req, res) => {
   }
 });
 
+// ONE-TIME SEED — remove after first successful run
+app.get('/api/seed', async (req, res) => {
+  if (!pool) return res.status(503).json({ error: 'No database configured' });
+  try {
+    const { rows } = await pool.query("SELECT id FROM app_state WHERE id = 'singleton'");
+    if (rows.length > 0) {
+      return res.json({ ok: false, message: 'Database already has data. Delete the row in app_state to re-seed.' });
+    }
+    const { STATE } = require('./scripts/seed.js');
+    await pool.query(
+      `INSERT INTO app_state (id, state) VALUES ('singleton', $1)`,
+      [STATE]
+    );
+    res.json({ ok: true, cases: STATE.cases.length, team: STATE.team.length });
+  } catch (e) {
+    console.error('Seed error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/ai/complete', async (req, res) => {
   const { prompt } = req.body;
   if (!prompt) return res.status(400).json({ error: 'No prompt' });
