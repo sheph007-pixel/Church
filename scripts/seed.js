@@ -32,10 +32,10 @@ const TEAM = [
 ];
 
 const CASES = [
-  // ─── 24-001 · Patrice Smiley ────────────────────────────────────────
+  // ─── 4821 · Patrice Smiley ──────────────────────────────────────────
   {
     id: 'c_24001',
-    caseNumber: '24-001',
+    caseNumber: '4821',
     name: 'Patrice Smiley',
     status: 'active',
     opened: '2024-07-25',
@@ -88,10 +88,10 @@ const CASES = [
     files: [],
   },
 
-  // ─── 24-002 · Crystal Waldo ─────────────────────────────────────────
+  // ─── 7354 · Crystal Waldo ───────────────────────────────────────────
   {
     id: 'c_24002',
-    caseNumber: '24-002',
+    caseNumber: '7354',
     name: 'Crystal Waldo',
     status: 'active',
     opened: '2024-07-27',
@@ -144,10 +144,10 @@ const CASES = [
     files: [],
   },
 
-  // ─── 24-003 · Ali Tutak ─────────────────────────────────────────────
+  // ─── 2967 · Ali Tutak ───────────────────────────────────────────────
   {
     id: 'c_24003',
-    caseNumber: '24-003',
+    caseNumber: '2967',
     name: 'Ali Tutak',
     status: 'active',
     opened: '2024-07-31',
@@ -188,10 +188,10 @@ const CASES = [
     files: [],
   },
 
-  // ─── 24-004 · Confidential — Medical ────────────────────────────────
+  // ─── 5138 · Confidential — Medical ──────────────────────────────────
   {
     id: 'c_24004',
-    caseNumber: '24-004',
+    caseNumber: '5138',
     name: 'Confidential — Medical',
     status: 'closed',
     opened: '2024-07-28',
@@ -210,10 +210,10 @@ const CASES = [
     files: [],
   },
 
-  // ─── 24-005 · Rebekah Kirkland ──────────────────────────────────────
+  // ─── 8413 · Rebekah Kirkland ────────────────────────────────────────
   {
     id: 'c_24005',
-    caseNumber: '24-005',
+    caseNumber: '8413',
     name: 'Rebekah Kirkland',
     status: 'closed',
     opened: '2024-10-23',
@@ -240,10 +240,10 @@ const CASES = [
     files: [],
   },
 
-  // ─── 24-006 · Emily Moore ────────────────────────────────────────────
+  // ─── 3756 · Emily Moore ──────────────────────────────────────────────
   {
     id: 'c_24006',
-    caseNumber: '24-006',
+    caseNumber: '3756',
     name: 'Emily Moore',
     status: 'closed',
     opened: '2024-11-13',
@@ -264,10 +264,10 @@ const CASES = [
     files: [],
   },
 
-  // ─── 25-001 · Jon & Alicia Brightwell ───────────────────────────────
+  // ─── 6290 · Jon & Alicia Brightwell ─────────────────────────────────
   {
     id: 'c_25001',
-    caseNumber: '25-001',
+    caseNumber: '6290',
     name: 'Jon & Alicia Brightwell',
     status: 'active',
     opened: '2025-03-04',
@@ -314,10 +314,10 @@ const CASES = [
     files: [],
   },
 
-  // ─── 25-002 · Amanda Jones ──────────────────────────────────────────
+  // ─── 1847 · Amanda Jones ────────────────────────────────────────────
   {
     id: 'c_25002',
-    caseNumber: '25-002',
+    caseNumber: '1847',
     name: 'Amanda Jones',
     status: 'active',
     opened: '2025-03-26',
@@ -356,10 +356,10 @@ const CASES = [
     files: [],
   },
 
-  // ─── 25-003 · Shane & Kelcey Alexander ──────────────────────────────
+  // ─── 9053 · Shane & Kelcey Alexander ────────────────────────────────
   {
     id: 'c_25003',
-    caseNumber: '25-003',
+    caseNumber: '9053',
     name: 'Shane & Kelcey Alexander',
     status: 'paused',
     opened: '2025-04-15',
@@ -383,10 +383,10 @@ const CASES = [
     files: [],
   },
 
-  // ─── 25-004 · Robert Fulcher ────────────────────────────────────────
+  // ─── 4612 · Robert Fulcher ──────────────────────────────────────────
   {
     id: 'c_25004',
-    caseNumber: '25-004',
+    caseNumber: '4612',
     name: 'Robert Fulcher',
     status: 'active',
     opened: '2025-05-14',
@@ -415,10 +415,10 @@ const CASES = [
     files: [],
   },
 
-  // ─── 25-005 · Covenant KC Couple — Counseling ────────────────────────
+  // ─── 7825 · Confidential couple (Covenant KC) ────────────────────────
   {
     id: 'c_25005',
-    caseNumber: '25-005',
+    caseNumber: '7825',
     name: 'Confidential couple (Covenant KC)',
     status: 'active',
     opened: '2025-05-13',
@@ -441,10 +441,10 @@ const CASES = [
     files: [],
   },
 
-  // ─── 25-006 · Confidential, counseling (Exodus KC) ──────────────────
+  // ─── 3491 · Confidential, counseling (Exodus KC) ────────────────────
   {
     id: 'c_25006',
-    caseNumber: '25-006',
+    caseNumber: '3491',
     name: 'Confidential, counseling (Exodus KC)',
     status: 'closed',
     opened: '2025-08-15',
@@ -468,7 +468,6 @@ const STATE = {
   team: TEAM,
   cases: CASES,
   events: [],
-  caseCounter: 1,
 };
 
 module.exports = { STATE, TEAM, CASES };

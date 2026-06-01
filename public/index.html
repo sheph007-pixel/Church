@@ -1212,7 +1212,7 @@
 // Shared team access code. Everyone uses the same code; the email
 // is what identifies WHO you are (and gates access — must be on the team).
 const ACCESS_CODE = '4601';
-const APP_VERSION = 'v1.5 · Jun 1 2026';
+const APP_VERSION = 'v1.6 · Jun 1 2026';
 
 function LoginPage3({ team, onLogin }) {
   const [email, setEmail] = React.useState('');
@@ -1295,7 +1295,6 @@ function App() {
   const [nav, setNav] = React.useState('active');
   const [selectedId, setSelectedId] = React.useState(null);
   const [cases, setCases] = React.useState(CASES);
-  const [caseCounter, setCaseCounter] = React.useState(1);
   const [team, setTeam] = React.useState(TEAM);
   const [events, setEvents] = React.useState(() => seedEvents());
   const [q, setQ] = React.useState('');
@@ -1322,7 +1321,6 @@ function App() {
               if (Array.isArray(state.cases)) setCases(state.cases);
               if (Array.isArray(state.team)) setTeam(state.team);
               if (Array.isArray(state.events)) setEvents(state.events);
-              if (typeof state.caseCounter === 'number') setCaseCounter(state.caseCounter);
             }
           }
           setMeId(sess.meId);
@@ -1414,10 +1412,10 @@ function App() {
       fetch('/api/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cases, team, events, caseCounter }),
+        body: JSON.stringify({ cases, team, events }),
       }).catch(() => {});
     }, 1500);
-  }, [cases, team, events, caseCounter, signedIn]);
+  }, [cases, team, events, signedIn]);
 
   React.useEffect(() => {
     const reload = async () => {
@@ -1550,9 +1548,9 @@ function App() {
     if (f) logEvent(cid, 'file_deleted', { name: f.name });
   };
   const createCase = ({ name, firstNote, contact }) => {
-    const yy = new Date().getFullYear().toString().slice(-2);
-    const num = yy + '-' + String(caseCounter).padStart(3, '0');
-    setCaseCounter(n => n + 1);
+    const usedNums = new Set(cases.map(c => c.caseNumber));
+    let num;
+    do { num = String(Math.floor(Math.random() * 9000) + 1000); } while (usedNums.has(num));
     const id = 'c' + Date.now();
     const contacts = contact && contact.name
       ? [{ id: 'p_' + Date.now(), ...contact }]
@@ -1715,8 +1713,7 @@ function App() {
                       if (Array.isArray(state.cases)) setCases(state.cases);
                       if (Array.isArray(state.team)) setTeam(state.team);
                       if (Array.isArray(state.events)) setEvents(state.events);
-                      if (typeof state.caseCounter === 'number') setCaseCounter(state.caseCounter);
-                    }
+                            }
                     setSeedStatus('done');
                   } else { setSeedStatus('exists'); }
                 } catch(e) { setSeedStatus('error'); }

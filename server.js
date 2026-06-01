@@ -248,6 +248,41 @@ app.get('/api/patch-v4', async (req, res) => {
   }
 });
 
+// Patch v6 — rename all cases from YY-NNN to random 4-digit numbers
+app.get('/api/patch-v6', async (req, res) => {
+  if (!pool) return res.status(503).json({ error: 'No database' });
+  try {
+    const { rows } = await pool.query("SELECT state FROM app_state WHERE id = 'singleton'");
+    if (!rows[0]) return res.status(404).json({ error: 'No state in DB' });
+
+    const state = JSON.parse(JSON.stringify(rows[0].state));
+    const numMap = {
+      'c_24001': '4821', 'c_24002': '7354', 'c_24003': '2967',
+      'c_24004': '5138', 'c_24005': '8413', 'c_24006': '3756',
+      'c_25001': '6290', 'c_25002': '1847', 'c_25003': '9053',
+      'c_25004': '4612', 'c_25005': '7825', 'c_25006': '3491',
+    };
+    const changes = [];
+    state.cases.forEach(c => {
+      if (numMap[c.id]) {
+        changes.push(`${c.caseNumber} → ${numMap[c.id]} (${c.name})`);
+        c.caseNumber = numMap[c.id];
+      }
+    });
+    // Also strip caseCounter from state
+    delete state.caseCounter;
+
+    await pool.query(
+      `INSERT INTO app_state (id, state) VALUES ('singleton', $1)
+       ON CONFLICT (id) DO UPDATE SET state = $1, updated_at = NOW()`,
+      [state]
+    );
+    res.json({ ok: true, changes });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Patch v5 — definitive fix for 25-006 date (reverts any auto-save writing 2026 back)
 app.get('/api/patch-v5', async (req, res) => {
   if (!pool) return res.status(503).json({ error: 'No database' });
