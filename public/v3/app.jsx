@@ -172,15 +172,21 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
     return sortDir === 'asc' ? cmp : -cmp;
   });
 
-  const SortBtn = ({ k, label }) => (
-    <button className={'sort-btn' + (sortKey === k ? ' active' : '')} onClick={() => handleSort(k)}>
-      {label}
-      {sortKey === k && (
-        <Icon name="chevronDown" size={11} stroke={2.2}
-          style={{ transform: sortDir === 'asc' ? 'scaleY(-1)' : 'none', transition: 'transform 120ms' }} />
-      )}
-    </button>
-  );
+  const ColH = ({ k, label, align }) => {
+    const active = sortKey === k;
+    return (
+      <button className={'col-h sortable' + (active ? ' col-active' : '')}
+              style={{ justifyContent: align === 'right' ? 'flex-end' : 'flex-start' }}
+              onClick={() => handleSort(k)}>
+        {label}
+        {active
+          ? <Icon name="chevronDown" size={11} stroke={2.2}
+              style={{ transform: sortDir === 'asc' ? 'scaleY(-1)' : 'none', transition: 'transform 120ms' }} />
+          : <Icon name="chevronDown" size={11} stroke={2.2} style={{ opacity: 0.3 }} />
+        }
+      </button>
+    );
+  };
 
   return (
     <div className="case-list">
@@ -192,16 +198,17 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
         <div className="head-actions">
           <div className="search">
             <Icon name="search" size={15} stroke={1.7} />
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search cases or notes…" />
+            <input value={q} onChange={e => setQ(e.target.value)}
+                   placeholder="Search all cases, notes, contacts…" />
           </div>
           <Btn3 variant="primary" icon="plus" onClick={onNew}>New Case</Btn3>
         </div>
       </div>
-      <div className="sort-bar">
-        <span className="sort-bar-label">Sort</span>
-        <SortBtn k="date" label="Date" />
-        <SortBtn k="name" label="Name" />
-        <SortBtn k="num"  label="#" />
+      <div className="col-headers">
+        <ColH k="num"  label="#" />
+        <ColH k="name" label="Name" />
+        <span className="col-h" style={{ cursor: 'default' }}>Team</span>
+        <ColH k="date" label="Last Activity" align="right" />
       </div>
 
       {onImport && seedStatus !== 'done' && (

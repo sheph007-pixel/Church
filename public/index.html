@@ -212,21 +212,25 @@
 
   .list-head {
     display: flex; align-items: flex-start; justify-content: space-between;
-    gap: 24px; margin-bottom: 16px;
+    gap: 24px; margin-bottom: 20px;
   }
-  .sort-bar {
-    display: flex; align-items: center; gap: 3px;
-    margin-bottom: 16px;
+  .col-headers {
+    display: grid; grid-template-columns: 78px 1fr 110px 80px;
+    gap: 18px; padding: 0 12px 8px;
+    border-bottom: 1px solid var(--border-strong);
+    margin-bottom: 0;
   }
-  .sort-bar-label { font-size: 11.5px; color: var(--text-faint); margin-right: 4px; letter-spacing: 0.02em; text-transform: uppercase; }
-  .sort-btn {
+  .col-h {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-faint);
     display: inline-flex; align-items: center; gap: 3px;
-    background: none; border: 1px solid transparent; border-radius: 6px;
-    padding: 3px 9px; font-size: 12px; color: var(--text-muted);
-    cursor: pointer; font-family: var(--font); transition: all 80ms;
+    background: none; border: none; padding: 0; font-family: var(--font);
+    cursor: default; white-space: nowrap;
   }
-  .sort-btn:hover { background: var(--bg-hover); color: var(--text); }
-  .sort-btn.active { background: var(--bg-card, #fff); border-color: var(--border); color: var(--text); font-weight: 600; }
+  .col-h.sortable { cursor: pointer; }
+  .col-h.sortable:hover { color: var(--text-muted); }
+  .col-h.col-active { color: var(--text); }
+  @media (max-width: 768px) { .col-headers { display: none; } }
   .page-title { font-size: 26px; font-weight: 700; letter-spacing: -0.5px;
     margin: 0; line-height: 1.1; color: var(--text); font-family: var(--font-disp); }
   .page-sub { font-size: 13px; color: var(--text-muted); margin-top: 5px; line-height: 1.4; }
@@ -1449,10 +1453,12 @@ function App() {
   };
 
   let filtered = cases;
-  if (nav === 'active') filtered = filtered.filter(c => c.status === 'active');
-  if (nav === 'paused') filtered = filtered.filter(c => c.status === 'paused');
-  if (nav === 'closed') filtered = filtered.filter(c => c.status === 'closed');
-  if (q) {
+  const searching = q.trim().length > 0;
+  if (!searching) {
+    if (nav === 'active') filtered = filtered.filter(c => c.status === 'active');
+    if (nav === 'paused') filtered = filtered.filter(c => c.status === 'paused');
+    if (nav === 'closed') filtered = filtered.filter(c => c.status === 'closed');
+  } else {
     const qq = q.toLowerCase();
     filtered = filtered.filter(c =>
       c.name.toLowerCase().includes(qq) ||
@@ -1692,7 +1698,10 @@ function App() {
               onRemoveMember={removeMember} onSetLeader={setTeamLeader} />;
   } else {
     main = <CaseList3 cases={filtered} onSelect={setSelectedId}
-              title={titleMap[nav]} sub={`${filtered.length} ${filtered.length === 1 ? 'case' : 'cases'}`}
+              title={searching ? 'Search Results' : titleMap[nav]}
+              sub={searching
+                ? `${filtered.length} ${filtered.length === 1 ? 'result' : 'results'} across all cases`
+                : `${filtered.length} ${filtered.length === 1 ? 'case' : 'cases'}`}
               q={q} setQ={setQ} onNew={() => setNewOpen(true)}
               onImport={cases.length === 0 ? async (setSeedStatus) => {
                 setSeedStatus('loading');
