@@ -179,11 +179,11 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
               style={{ justifyContent: align === 'right' ? 'flex-end' : 'flex-start' }}
               onClick={() => handleSort(k)}>
         {label}
-        {active
-          ? <Icon name="chevronDown" size={11} stroke={2.2}
-              style={{ transform: sortDir === 'asc' ? 'scaleY(-1)' : 'none', transition: 'transform 120ms' }} />
-          : <Icon name="chevronDown" size={11} stroke={2.2} style={{ opacity: 0.3 }} />
-        }
+        <Icon name="chevronDown" size={11} stroke={2.2} style={{
+          opacity: active ? 1 : 0.45,
+          transform: active && sortDir === 'asc' ? 'scaleY(-1)' : 'none',
+          transition: 'transform 120ms',
+        }} />
       </button>
     );
   };
