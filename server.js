@@ -46,18 +46,14 @@ app.post('/api/state', async (req, res) => {
   }
 });
 
-// ONE-TIME SEED — remove after first successful run
+// ONE-TIME SEED — always overwrites so it works even if empty state was saved first
 app.get('/api/seed', async (req, res) => {
   if (!pool) return res.status(503).json({ error: 'No database configured' });
   try {
-    const { rows } = await pool.query("SELECT state FROM app_state WHERE id = 'singleton'");
-    const existingCases = rows[0] && rows[0].state && rows[0].state.cases;
-    if (Array.isArray(existingCases) && existingCases.length > 0) {
-      return res.json({ ok: false, message: 'Cases already exist — skipping seed.' });
-    }
     const { STATE } = require('./scripts/seed.js');
     await pool.query(
-      `INSERT INTO app_state (id, state) VALUES ('singleton', $1)`,
+      `INSERT INTO app_state (id, state) VALUES ('singleton', $1)
+       ON CONFLICT (id) DO UPDATE SET state = $1, updated_at = NOW()`,
       [STATE]
     );
     res.json({ ok: true, cases: STATE.cases.length, team: STATE.team.length });
