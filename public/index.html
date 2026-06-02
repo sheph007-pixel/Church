@@ -1220,11 +1220,49 @@ const CASE_NUM_MAP = {
   'c_24005':'8413','c_24006':'3756','c_25001':'6290','c_25002':'1847',
   'c_25003':'9053','c_25004':'4612','c_25005':'7825','c_25006':'3491',
 };
+// Deacon emails from the Faith PCA deacons email list. Keyed by id (stable)
+// and by normalized name (fallback, since live records were renamed in-app —
+// e.g. "Tim Smith", "Watkins Youngblood"). Used to backfill any empty email.
+const DEACON_EMAILS_BY_ID = {
+  tm10: 'hunter@kennion.com',
+  tm_ts: 'tsmith24@hotmail.com',
+  tm_ca: 'chasealdridge3@gmail.com',
+  tm_dc: 'derekcavin@gmail.com',
+  tm_js: 'jpshank2@gmail.com',
+  tm_jh: 'josiahhelms7@gmail.com',
+  tm_kc: 'kcooke@esri.com',
+  tm_rs: 'randal@truelightbranding.com',
+  tm_wy: 'jwyoungblood800@gmail.com',
+};
+const DEACON_EMAILS_BY_NAME = {
+  'hunter shepherd': 'hunter@kennion.com',
+  'hunter kennion': 'hunter@kennion.com',
+  'timothy smith': 'tsmith24@hotmail.com',
+  'tim smith': 'tsmith24@hotmail.com',
+  'chase aldridge': 'chasealdridge3@gmail.com',
+  'derek cavin': 'derekcavin@gmail.com',
+  'jeremy shank': 'jpshank2@gmail.com',
+  'josiah helms': 'josiahhelms7@gmail.com',
+  'keith cooke': 'kcooke@esri.com',
+  'randal snook': 'randal@truelightbranding.com',
+  'watkins y': 'jwyoungblood800@gmail.com',
+  'watkins youngblood': 'jwyoungblood800@gmail.com',
+};
 function migrateTeam(team) {
   if (!Array.isArray(team)) return team;
-  return team.map(m => m.id === 'tm10' && m.name === 'Hunter Kennion'
-    ? { ...m, name: 'Hunter Shepherd', initials: 'HS' }
-    : m);
+  return team.map(m => {
+    let next = m;
+    if (m.id === 'tm10' && m.name === 'Hunter Kennion') {
+      next = { ...next, name: 'Hunter Shepherd', initials: 'HS' };
+    }
+    // Backfill a missing email from the deacons list (don't overwrite edits).
+    if (!next.email) {
+      const email = DEACON_EMAILS_BY_ID[next.id]
+        || DEACON_EMAILS_BY_NAME[(next.name || '').trim().toLowerCase()];
+      if (email) next = { ...next, email };
+    }
+    return next;
+  });
 }
 function migrateCases(cases) {
   if (!Array.isArray(cases)) return cases;
