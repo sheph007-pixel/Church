@@ -163,6 +163,72 @@ app.get('/api/patch-v2', async (req, res) => {
   }
 });
 
+// Patch v8 — fill in deacon emails from the Faith PCA deacons email list.
+// Matches existing team members by id (with a name fallback) and only fills
+// emails that are currently empty, so it is safe to run repeatedly.
+app.get('/api/patch-v8', async (req, res) => {
+  if (!pool) return res.status(503).json({ error: 'No database' });
+  try {
+    const { rows } = await pool.query("SELECT state FROM app_state WHERE id = 'singleton'");
+    if (!rows[0]) return res.status(404).json({ error: 'No state in DB — seed first via /api/seed' });
+
+    const state = JSON.parse(JSON.stringify(rows[0].state));
+
+    // Email by stable team id (primary match)
+    const byId = {
+      tm10:  'hunter@kennion.com',
+      tm_ts: 'tsmith24@hotmail.com',
+      tm_ca: 'chasealdridge3@gmail.com',
+      tm_dc: 'derekcavin@gmail.com',
+      tm_js: 'jpshank2@gmail.com',
+      tm_jh: 'josiahhelms7@gmail.com',
+      tm_kc: 'kcooke@esri.com',
+      tm_rs: 'randal@truelightbranding.com',
+      tm_wy: 'jwyoungblood800@gmail.com',
+    };
+    // Email by normalized name (fallback if ids differ in the live DB)
+    const byName = {
+      'hunter shepherd': 'hunter@kennion.com',
+      'timothy smith':   'tsmith24@hotmail.com',
+      'tim smith':       'tsmith24@hotmail.com',
+      'chase aldridge':  'chasealdridge3@gmail.com',
+      'derek cavin':     'derekcavin@gmail.com',
+      'jeremy shank':    'jpshank2@gmail.com',
+      'josiah helms':    'josiahhelms7@gmail.com',
+      'keith cooke':     'kcooke@esri.com',
+      'randal snook':    'randal@truelightbranding.com',
+      'watkins y':         'jwyoungblood800@gmail.com',
+      'watkins youngblood':'jwyoungblood800@gmail.com',
+    };
+
+    const changes = [];
+    const unmatched = [];
+    (state.team || []).forEach(d => {
+      const email = byId[d.id] || byName[(d.name || '').trim().toLowerCase()];
+      if (!email) { unmatched.push(d.name); return; }
+      if (d.email === email) return; // already set
+      d.email = email;
+      changes.push(`${d.name} → ${email}`);
+    });
+
+    await pool.query(
+      `INSERT INTO app_state (id, state) VALUES ('singleton', $1)
+       ON CONFLICT (id) DO UPDATE SET state = $1, updated_at = NOW()`,
+      [state]
+    );
+
+    res.json({
+      ok: true,
+      changes,
+      unmatched,
+      team: (state.team || []).map(d => ({ id: d.id, name: d.name, email: d.email })),
+    });
+  } catch (e) {
+    console.error('Patch-v8 error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Patch v3 — fix 25-006 date (2026→2025) + correct Amanda Jones description
 app.get('/api/patch-v3', async (req, res) => {
   if (!pool) return res.status(503).json({ error: 'No database' });

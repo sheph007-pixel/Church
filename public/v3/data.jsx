@@ -4,7 +4,7 @@
 // Deacons (system users): name, email, phone, color
 // One deacon is flagged isLeader: true at a time.
 const TEAM = [
-  { id: 'tm10', name: 'Hunter Shepherd', initials: 'HS', email: '',
+  { id: 'tm10', name: 'Hunter Shepherd', initials: 'HS', email: 'hunter@kennion.com',
     phone: '', color: '#0f766e', addedBy: 'system', addedAt: '2026-06-01',
     isLeader: true, lastLogin: null },
 ];
