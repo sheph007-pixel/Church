@@ -278,11 +278,13 @@ function MembersView({ team, me, onAddMember, onUpdateMember, onRemoveMember, on
   const isLeader = !!me.isLeader;
 
   // sort leader first, then alpha
-  const sorted = team.slice().sort((a, b) => {
+  const byName = (a, b) => {
     if (a.isLeader && !b.isLeader) return -1;
     if (b.isLeader && !a.isLeader) return 1;
     return a.name.localeCompare(b.name);
-  });
+  };
+  const active = team.filter(m => !m.inactive).sort(byName);
+  const past = team.filter(m => m.inactive).sort(byName);
 
   return (
     <div className="tool-view">
@@ -290,7 +292,7 @@ function MembersView({ team, me, onAddMember, onUpdateMember, onRemoveMember, on
         <div>
           <h1 className="page-title">Deacons</h1>
           <div className="page-sub">
-            {team.length} deacons · one designated Team Leader.{' '}
+            {active.length} deacons · one designated Team Leader.{past.length ? ` ${past.length} past deacons kept for history.` : ''}{' '}
             {isLeader
               ? 'As leader, you can add or remove deacons and reassign the lead.'
               : 'Only the Team Leader can add or remove deacons.'}
@@ -300,12 +302,27 @@ function MembersView({ team, me, onAddMember, onUpdateMember, onRemoveMember, on
       </div>
 
       <div className="members-list">
-        {sorted.map(m => (
+        {active.map(m => (
           <MemberRow key={m.id} m={m} me={me} isLeader={isLeader}
             onUpdate={onUpdateMember} onRemove={onRemoveMember}
             onSetLeader={onSetLeader} />
         ))}
       </div>
+
+      {past.length > 0 && (
+        <>
+          <div className="page-sub" style={{ margin: '22px 0 8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em', fontSize: 11, opacity: .7 }}>
+            Past deacons
+          </div>
+          <div className="members-list">
+            {past.map(m => (
+              <MemberRow key={m.id} m={m} me={me} isLeader={isLeader}
+                onUpdate={onUpdateMember} onRemove={onRemoveMember}
+                onSetLeader={onSetLeader} />
+            ))}
+          </div>
+        </>
+      )}
 
       {adding && (
         <AddDeaconModal onClose={() => setAdding(false)} onAdd={(payload) => { onAddMember(payload); setAdding(false); }} />
@@ -321,7 +338,8 @@ function MemberRow({ m, me, isLeader, onUpdate, onRemove, onSetLeader }) {
   React.useEffect(() => { setDraft(m); }, [m.id, m.name, m.email, m.phone]);
 
   // Who may edit this row's contact info: the leader (anyone) or a deacon editing their own row.
-  const canEdit = isLeader || m.id === me.id;
+  // Past (inactive) deacons are read-only — kept only so their historical notes attribute correctly.
+  const canEdit = !m.inactive && (isLeader || m.id === me.id);
 
   if (editing) {
     return (
@@ -344,12 +362,13 @@ function MemberRow({ m, me, isLeader, onUpdate, onRemove, onSetLeader }) {
   }
 
   return (
-    <div className="member-row">
+    <div className="member-row" style={m.inactive ? { opacity: .55 } : undefined}>
       <Av3 id={m.id} size={36} />
       <div className="member-col">
         <div className="member-name">
           {m.name}{m.id === me.id && <span className="member-you"> (you)</span>}
           {m.isLeader && <span className="leader-tag"><Icon name="shield" size={10} stroke={2} /> Team Leader</span>}
+          {m.inactive && <span className="member-you"> · Past deacon</span>}
         </div>
         <div className="member-contact">
           {m.phone && <a href={fmt3.telHref(m.phone)} className="contact-link"><Icon name="phone" size={11} stroke={1.9} /> {m.phone}</a>}
@@ -358,16 +377,18 @@ function MemberRow({ m, me, isLeader, onUpdate, onRemove, onSetLeader }) {
       </div>
       <div className="member-meta">
         <span className="member-lastlogin">
-          {m.lastLogin
-            ? <>Last login {fmt3.dateTime(m.lastLogin)}</>
-            : <span className="member-never">Never signed in</span>}
+          {m.inactive
+            ? <span className="member-never">Rolled off</span>
+            : m.lastLogin
+              ? <>Last login {fmt3.dateTime(m.lastLogin)}</>
+              : <span className="member-never">Never signed in</span>}
         </span>
         <span className="member-since">
           Added {fmt3.dateFull(m.addedAt + 'T00:00:00')}{inviter && ` by ${inviter.name.split(' ')[0]}`}
         </span>
       </div>
       <div className="member-actions">
-        {isLeader && !m.isLeader && (
+        {isLeader && !m.isLeader && !m.inactive && (
           <button className="link-btn" onClick={() => {
             if (confirm(`Make ${m.name} the Team Leader? You'll be demoted to deacon and lose the ability to add or remove deacons.`)) onSetLeader(m.id);
           }} title="Make Team Leader">
@@ -379,7 +400,7 @@ function MemberRow({ m, me, isLeader, onUpdate, onRemove, onSetLeader }) {
             <Icon name="pencil" size={13} stroke={1.7} />
           </button>
         )}
-        {isLeader && m.id !== me.id && !m.isLeader && (
+        {isLeader && m.id !== me.id && !m.isLeader && !m.inactive && (
           <button className="icon-btn member-remove" onClick={() => {
             if (confirm(`Remove ${m.name}? They'll lose access. Their past notes stay.`)) onRemove(m.id);
           }} title="Remove">

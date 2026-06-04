@@ -17,7 +17,48 @@ if (pool) {
     id TEXT PRIMARY KEY DEFAULT 'singleton',
     state JSONB NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW()
-  )`).catch(e => console.error('DB init:', e.message));
+  )`)
+    .then(() => reconcileData())
+    .catch(e => console.error('DB init:', e.message));
+}
+
+// ── Automatic data reconciliation (runs once per DATA_VERSION on boot) ──────
+// The live case/team data was originally reconstructed from a hard-to-read PDF
+// and had wrong years, missing cases, and missing past-deacon authors. When this
+// version of the code deploys, overwrite the live cases + team from the
+// authoritative seed (preserving the activity log). Version-gated so it runs only
+// once and never fights later edits. The marker lives in its own row so the
+// client's {cases,team,events} autosave can't clobber it.
+const DATA_VERSION = 2;
+async function reconcileData() {
+  if (!pool) return;
+  try {
+    const meta = await pool.query("SELECT state FROM app_state WHERE id = 'datamigration'");
+    const applied = meta.rows[0] && meta.rows[0].state ? (meta.rows[0].state.version || 0) : 0;
+    if (applied >= DATA_VERSION) return;
+
+    const { rows } = await pool.query("SELECT state FROM app_state WHERE id = 'singleton'");
+    if (rows[0] && rows[0].state) {
+      const { TEAM, CASES } = require('./scripts/seed.js');
+      const state = JSON.parse(JSON.stringify(rows[0].state));
+      state.team = TEAM;     // refreshes emails + adds inactive past deacons
+      state.cases = CASES;   // authoritative cases (correct dates/amounts/notes)
+      // state.events (activity log) is preserved as-is.
+      await pool.query(
+        `INSERT INTO app_state (id, state) VALUES ('singleton', $1)
+         ON CONFLICT (id) DO UPDATE SET state = $1, updated_at = NOW()`,
+        [state]
+      );
+      console.log(`Data reconcile v${DATA_VERSION}: ${CASES.length} cases, ${TEAM.length} team members written.`);
+    }
+    await pool.query(
+      `INSERT INTO app_state (id, state) VALUES ('datamigration', $1)
+       ON CONFLICT (id) DO UPDATE SET state = $1, updated_at = NOW()`,
+      [{ version: DATA_VERSION }]
+    );
+  } catch (e) {
+    console.error('Data reconcile error:', e.message);
+  }
 }
 
 app.get('/api/state', async (req, res) => {
@@ -59,6 +100,28 @@ app.get('/api/seed', async (req, res) => {
     res.json({ ok: true, cases: STATE.cases.length, team: STATE.team.length });
   } catch (e) {
     console.error('Seed error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Manual trigger for the data reconcile (normally runs automatically on boot).
+// Clears the version marker and re-applies, overwriting live cases + team from
+// the authoritative seed while preserving the activity log.
+app.get('/api/reseed-data', async (req, res) => {
+  if (!pool) return res.status(503).json({ error: 'No database configured' });
+  try {
+    await pool.query("DELETE FROM app_state WHERE id = 'datamigration'");
+    await reconcileData();
+    const { rows } = await pool.query("SELECT state FROM app_state WHERE id = 'singleton'");
+    const state = rows[0] ? rows[0].state : null;
+    res.json({
+      ok: true,
+      version: DATA_VERSION,
+      cases: state ? state.cases.length : 0,
+      team: state ? state.team.length : 0,
+    });
+  } catch (e) {
+    console.error('Reseed-data error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
