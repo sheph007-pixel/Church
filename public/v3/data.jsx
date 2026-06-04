@@ -175,8 +175,8 @@ function caseSig(c) {
 
 // ─── Audit / event log ──────────────────────────────────
 const EVENT_KINDS = {
-  case_created:    { label: 'opened case',         icon: 'plus' },
-  case_renamed:    { label: 'renamed case',        icon: 'pencil' },
+  case_created:    { label: 'opened opportunity',  icon: 'plus' },
+  case_renamed:    { label: 'renamed opportunity', icon: 'pencil' },
   status_changed:  { label: 'changed status',      icon: 'flag' },
   contact_added:   { label: 'added a contact',     icon: 'user' },
   contact_edited:  { label: 'edited a contact',    icon: 'pencil' },

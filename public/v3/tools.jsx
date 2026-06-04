@@ -36,7 +36,7 @@ function ReportView3({ cases, me, onSelect, onPrint }) {
         </div>
       </div>
 
-      <h2 className="section-h">Active Cases</h2>
+      <h2 className="section-h">Active Opportunities</h2>
       <div className="rows">
         {active.map(c => (
           <button key={c.id} onClick={() => onSelect(c.id)} className="row">
@@ -125,11 +125,11 @@ function PrintPreview3({ cases, summaries, onEnsureSummary }) {
         </header>
 
         <p className="paper-lead">
-          <strong>{active.length} active cases.</strong> A redacted summary of each follows below.
+          <strong>{active.length} active opportunities.</strong> A redacted summary of each follows below.
         </p>
 
         <section>
-          <h3 className="paper-h">Active Cases</h3>
+          <h3 className="paper-h">Active Opportunities</h3>
           {pages.map((chunk, pi) => (
             <div className="paper-page" key={pi}>
               {chunk.map((c) => {
@@ -141,7 +141,7 @@ function PrintPreview3({ cases, summaries, onEnsureSummary }) {
                       <span className="paper-case-num">{c.caseNumber}</span>
                     </div>
                     <div className="paper-item-line">
-                      <strong>Case:</strong>{' '}
+                      <strong>Opportunity:</strong>{' '}
                       <span className="reveal-only">{c.name}</span>
                       <span className="redact-only"><Bar w={Math.min(140, 50 + c.name.length * 6)} /></span>
                     </div>
@@ -218,7 +218,7 @@ function ActivityView3({ events, cases, team, onSelectCase }) {
             <option value="notes">Notes</option>
             <option value="tasks">Tasks</option>
             <option value="files">Files</option>
-            <option value="changes">Case Changes</option>
+            <option value="changes">Opportunity Changes</option>
             <option value="access">Access & Members</option>
           </select>
         </div>
@@ -443,7 +443,7 @@ function AddDeaconModal({ onClose, onAdd }) {
           <div className="form-row">
             <label>Phone <span className="optional">(optional)</span></label>
             <input value={phone} onChange={e => setPhone(e.target.value)} inputMode="tel" placeholder="(404) 555-0000" />
-            <div className="form-hint">So other deacons can call them about a case.</div>
+            <div className="form-hint">So other deacons can call them about an opportunity.</div>
           </div>
         </div>
         <div className="modal-foot">

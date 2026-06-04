@@ -1534,8 +1534,8 @@ function App() {
   // Sorting is handled inside CaseList3 so the user can change it per-view.
 
   const titleMap = {
-    all: 'All Cases',
-    active: 'Active Cases', paused: 'Paused', closed: 'Closed',
+    all: 'All Opportunities',
+    active: 'Active Opportunities', paused: 'Paused', closed: 'Closed',
   };
 
   // ─── Actions ──────────────────────────────────────────
@@ -1761,8 +1761,8 @@ function App() {
     main = <CaseList3 cases={filtered} onSelect={setSelectedId}
               title={searching ? 'Search Results' : titleMap[nav]}
               sub={searching
-                ? `${filtered.length} ${filtered.length === 1 ? 'result' : 'results'} across all cases`
-                : `${filtered.length} ${filtered.length === 1 ? 'case' : 'cases'}`}
+                ? `${filtered.length} ${filtered.length === 1 ? 'result' : 'results'} across all opportunities`
+                : `${filtered.length} ${filtered.length === 1 ? 'opportunity' : 'opportunities'}`}
               q={q} setQ={setQ} onNew={() => setNewOpen(true)}
               onImport={cases.length === 0 ? async (setSeedStatus) => {
                 setSeedStatus('loading');

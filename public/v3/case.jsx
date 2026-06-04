@@ -41,7 +41,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onUpdate, onA
   const shareToGroupMe = async () => {
     const openTasks = c.tasks.filter(t => !t.done).length;
     const summary = [
-      `Internal Benevolence — Case ${c.caseNumber}`,
+      `Internal Benevolence — Opportunity ${c.caseNumber}`,
       ``,
       `Status: ${(STATUSES[c.status] || {}).label || c.status}`,
       `Open tasks: ${openTasks}`,
@@ -332,7 +332,7 @@ function NewCase3({ onClose, onCreate, me }) {
     <div className="modal-scrim" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>New Case</h2>
+          <h2>New Opportunity</h2>
           <button className="icon-btn" onClick={onClose}>
             <Icon name="close" size={18} stroke={1.8} />
           </button>
@@ -340,7 +340,7 @@ function NewCase3({ onClose, onCreate, me }) {
         <div className="modal-body">
           <p className="modal-intro">Just a name to start. Add the rest as you go.</p>
           <div className="form-row">
-            <label>Case Name</label>
+            <label>Opportunity Name</label>
             <input autoFocus value={name} onChange={e => setName(e.target.value)}
                    placeholder='"Alvarez Family", "Grace O.", anything internal' />
             <div className="form-hint">Only deacons see this name. Printed reports always redact it.</div>
@@ -361,7 +361,7 @@ function NewCase3({ onClose, onCreate, me }) {
               <input value={contactEmail} placeholder="Email" type="email"
                      onChange={e => setContactEmail(e.target.value)} />
             </div>
-            <div className="form-hint">Add more contacts after the case is created.</div>
+            <div className="form-hint">Add more contacts after the opportunity is created.</div>
           </div>
         </div>
         <div className="modal-foot">
@@ -374,7 +374,7 @@ function NewCase3({ onClose, onCreate, me }) {
                    ? { name: contactName.trim(), phone: contactPhone.trim(), email: contactEmail.trim() }
                    : null,
                })}>
-            Create Case
+            Create Opportunity
           </Btn3>
         </div>
       </div>

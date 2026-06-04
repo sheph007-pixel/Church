@@ -91,15 +91,15 @@ function Sidebar3({ active, onNav, counts, onNew, me, onSignOut, onSwitchMe, col
           <Icon name={collapsed ? 'chevronRight' : 'chevronLeft'} size={14} stroke={2} />
         </button>
       </div>
-      <button onClick={onNew} className="new-btn" title={collapsed ? 'New Case' : null}>
-        <Icon name="plus" size={14} stroke={2.2} /> <span className="btn-label">New Case</span>
+      <button onClick={onNew} className="new-btn" title={collapsed ? 'New Opportunity' : null}>
+        <Icon name="plus" size={14} stroke={2.2} /> <span className="btn-label">New Opportunity</span>
       </button>
       <nav className="sidebar-nav">
-        <div className="nav-label">Cases</div>
-        <button onClick={() => onNav('all')} title="All Cases"
+        <div className="nav-label">Opportunities</div>
+        <button onClick={() => onNav('all')} title="All Opportunities"
           className={'nav-item' + (active === 'all' ? ' active' : '')}>
           <Icon name="folder" size={16} stroke={1.7} />
-          <span>All Cases</span>
+          <span>All Opportunities</span>
           <span className="nav-count">{counts.all}</span>
         </button>
         {items.map(it => (
@@ -199,9 +199,9 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
           <div className="search">
             <Icon name="search" size={15} stroke={1.7} />
             <input value={q} onChange={e => setQ(e.target.value)}
-                   placeholder="Search all cases, notes, contacts…" />
+                   placeholder="Search all opportunities, notes, contacts…" />
           </div>
-          <Btn3 variant="primary" icon="plus" onClick={onNew}>New Case</Btn3>
+          <Btn3 variant="primary" icon="plus" onClick={onNew}>New Opportunity</Btn3>
         </div>
       </div>
       <div className="col-headers">
@@ -215,8 +215,8 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
         <div style={{ margin: '0 0 20px', padding: '18px 20px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 14 }}>
           <Icon name="sparkle" size={18} stroke={1.7} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600, fontSize: 14, color: '#065f46' }}>Import historical case data</div>
-            <div style={{ fontSize: 13, color: '#047857', marginTop: 2 }}>11 cases from the GroupMe chat (Jul 2024 – Jun 2025) are ready to load.</div>
+            <div style={{ fontWeight: 600, fontSize: 14, color: '#065f46' }}>Import historical opportunity data</div>
+            <div style={{ fontSize: 13, color: '#047857', marginTop: 2 }}>Opportunities from the GroupMe chat are ready to load.</div>
           </div>
           {seedStatus === 'error' && <span style={{ fontSize: 13, color: '#dc2626' }}>Error — try again</span>}
           {seedStatus === 'exists' && <span style={{ fontSize: 13, color: '#6b7280' }}>Already imported</span>}
@@ -229,8 +229,8 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
       {sorted.length === 0 ? (
         <div className="empty">
           <Icon name="folder" size={22} stroke={1.5} />
-          <div className="empty-title">No Cases Here</div>
-          <div className="empty-body">Try a different filter or create a new case.</div>
+          <div className="empty-title">No Opportunities Here</div>
+          <div className="empty-body">Try a different filter or create a new opportunity.</div>
         </div>
       ) : (
         <div className="rows">
