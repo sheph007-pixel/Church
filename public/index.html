@@ -1834,7 +1834,7 @@ function App() {
     main = <MembersView team={team} me={me}
               onAddMember={addMember} onUpdateMember={updateMember}
               onRemoveMember={removeMember} onSetLeader={setTeamLeader} />;
-  } else if (nav === 'sync') {
+  } else if (nav === 'sync' && me && me.isLeader) {
     main = <SyncView3 me={me} cases={cases} sync={sync}
               onAcceptNote={acceptNoteSuggestion}
               onAcceptOpportunity={acceptNewOpportunity}
@@ -1903,7 +1903,7 @@ function App() {
         <button className={'mobile-nav-item' + (!selected && (nav === 'active' || nav === 'all' || nav === 'paused' || nav === 'closed') ? ' active' : '')}
                 onClick={() => { setSelectedId(null); setNav('active'); }}>
           <Icon name="folder" size={20} stroke={1.7} />
-          <span>Cases</span>
+          <span>Opportunities</span>
         </button>
         <button className={'mobile-nav-item' + (!selected && nav === 'activity' ? ' active' : '')}
                 onClick={() => { setSelectedId(null); setNav('activity'); }}>
