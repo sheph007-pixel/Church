@@ -992,18 +992,7 @@
     border-top: 1px solid #d8d5cc;
     font-size: 10.5px; color: #71717a; text-align: center; line-height: 1.6;
   }
-  .paper-item { break-inside: avoid; }
-  /* Per-page footer (page numbers) — only shows when printing. */
-  .paper-page-foot { display: none; }
-  @media print {
-    .paper-page { break-after: page; page-break-after: always; }
-    .paper-page:last-child { break-after: auto; page-break-after: auto; }
-    .paper-page-foot {
-      display: block; margin-top: 28px; padding-top: 12px;
-      border-top: 1px solid #d8d5cc;
-      font-size: 10px; color: #71717a; text-align: center; line-height: 1.5;
-    }
-  }
+  .paper-item { break-inside: avoid; page-break-inside: avoid; }
 
   /* ─── Login ─────────────────────────────────────────── */
   .login-page {
@@ -1143,7 +1132,8 @@
   }
 
   @media print {
-    .sidebar, .detail-head, .detail-meta, .tool-head, .composer { display: none !important; }
+    .sidebar, .detail-head, .detail-meta, .tool-head, .composer,
+    .mobile-header, .mobile-nav, .mobile-fab { display: none !important; }
     body { background: #fff; }
     /* Let content flow across pages instead of scrolling inside the app shell. */
     html, body { height: auto !important; overflow: visible !important; }

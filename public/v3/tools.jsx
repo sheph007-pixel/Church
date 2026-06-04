@@ -77,13 +77,8 @@ function PrintPreview3({ cases, summaries, onEnsureSummary }) {
   const [reveal, setReveal] = React.useState(false);
   const active = cases.filter(c => c.status === 'active');
 
-  // Paginate the printout: 5 cases per page.
-  const PAGE_SIZE = 5;
-  const pages = [];
-  for (let i = 0; i < active.length; i += PAGE_SIZE) pages.push(active.slice(i, i + PAGE_SIZE));
-
-  // Ensure every active case has a stored summary (generates any that are
-  // missing/stale). Uses the SAME shared summaries shown on each case page.
+  // Ensure every active opportunity has a stored summary (generates any that are
+  // missing/stale). Uses the SAME shared summaries shown on each opportunity page.
   React.useEffect(() => {
     active.forEach(c => onEnsureSummary && onEnsureSummary(c));
   }, [cases]);
@@ -120,7 +115,7 @@ function PrintPreview3({ cases, summaries, onEnsureSummary }) {
             </div>
           </div>
           <div className="paper-meta">
-            <div>Date prepared: {fmt3.dateFull('2026-05-21')}</div>
+            <div>Date prepared: {fmt3.dateFull(new Date().toISOString())}</div>
           </div>
         </header>
 
@@ -130,40 +125,34 @@ function PrintPreview3({ cases, summaries, onEnsureSummary }) {
 
         <section>
           <h3 className="paper-h">Active Opportunities</h3>
-          {pages.map((chunk, pi) => (
-            <div className="paper-page" key={pi}>
-              {chunk.map((c) => {
-                const entry = (summaries && summaries[c.id]) || {};
-                const loading = entry.loading && entry.text == null;
-                return (
-                  <div key={c.id} className="paper-item">
-                    <div className="paper-item-head">
-                      <span className="paper-case-num">{c.caseNumber}</span>
-                    </div>
-                    <div className="paper-item-line">
-                      <strong>Opportunity:</strong>{' '}
-                      <span className="reveal-only">{c.name}</span>
-                      <span className="redact-only"><Bar w={Math.min(140, 50 + c.name.length * 6)} /></span>
-                    </div>
-                    <div className="paper-item-line paper-summary">
-                      <strong>Summary:</strong>{' '}
-                      {loading
-                        ? <em className="paper-loading">Helper is summarizing and redacting…</em>
-                        : entry.text
-                          ? <>
-                              <span className="reveal-only">{entry.text}</span>
-                              <span className="redact-only"><RedactedSummary text={entry.text} redactions={entry.redactions} /></span>
-                            </>
-                          : 'No notes yet.'}
-                    </div>
-                  </div>
-                );
-              })}
-              <div className="paper-page-foot">
-                Page {pi + 1} of {pages.length}
+          {active.map((c) => {
+            const entry = (summaries && summaries[c.id]) || {};
+            const loading = entry.loading && entry.text == null;
+            return (
+              <div key={c.id} className="paper-item">
+                <div className="paper-item-head">
+                  <span className="paper-case-num">{c.caseNumber}</span>
+                </div>
+                <div className="paper-item-line">
+                  <strong>Opportunity:</strong>{' '}
+                  <span className="reveal-only">{c.name}</span>
+                  <span className="redact-only"><Bar w={Math.min(140, 50 + c.name.length * 6)} /></span>
+                </div>
+                <div className="paper-item-line paper-summary">
+                  <strong>Summary:</strong>{' '}
+                  {loading
+                    ? <em className="paper-loading">Helper is summarizing and redacting…</em>
+                    : entry.text
+                      ? <>
+                          <span className="reveal-only">{entry.text}</span>
+                          <span className="redact-only"><RedactedSummary text={entry.text} redactions={entry.redactions} /></span>
+                        </>
+                      : 'No notes yet.'}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
+          <div className="paper-foot">End of report · {active.length} active opportunities · this printout is redacted and safe to leave on a table.</div>
         </section>
       </div>
     </div>
