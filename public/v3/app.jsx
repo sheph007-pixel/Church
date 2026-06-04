@@ -67,6 +67,8 @@ function Sidebar3({ active, onNav, counts, onNew, me, onSignOut, onSwitchMe, col
   const tools = [
     { id: 'activity', icon: 'history', label: 'Activity Log' },
     { id: 'report',   icon: 'print',   label: 'Monthly Report' },
+    // Leader-only: catch records up from a GroupMe export before the monthly meeting.
+    ...(me && me.isLeader ? [{ id: 'sync', icon: 'download', label: 'GroupMe Sync' }] : []),
   ];
   return (
     <aside className={'sidebar' + (collapsed ? ' sidebar-collapsed' : '')}>

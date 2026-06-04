@@ -198,6 +198,9 @@ const EVENT_KINDS = {
   team_leader_changed: { label: 'changed team leader', icon: 'shield' },
   shared_to_groupme:   { label: 'shared to GroupMe', icon: 'chat' },
   summary_generated:   { label: 'regenerated the summary', icon: 'sparkle' },
+  groupme_synced:        { label: 'synced from GroupMe', icon: 'download' },
+  sync_note_imported:    { label: 'imported a note from GroupMe', icon: 'download' },
+  sync_opportunity_created: { label: 'created an opportunity from GroupMe', icon: 'download' },
 };
 
 function eventDetailText(e) {
@@ -224,6 +227,9 @@ function eventDetailText(e) {
     case 'deacon_edited':    return d.name || '';
     case 'team_leader_changed': return d.from ? `${d.from} → ${d.to}` : d.to;
     case 'shared_to_groupme':   return d.caseNumber ? `${d.caseNumber} · ${d.caseName}` : '';
+    case 'groupme_synced':      return `${d.added || 0} note(s), ${d.created || 0} new · ${d.dismissed || 0} dismissed`;
+    case 'sync_note_imported':  return d.preview ? '"' + d.preview + (d.preview.length >= 80 ? '…' : '') + '"' : '';
+    case 'sync_opportunity_created': return d.name || '';
     case 'summary_generated':   return d.manual ? 'manual refresh' : 'after a note or task update';
     default: return '';
   }
@@ -280,8 +286,88 @@ function seedEvents() {
   return events.sort((a,b) => new Date(b.at) - new Date(a.at));
 }
 
+// ─── GroupMe export parsing (for the admin Sync screen) ──────────────────
+// Returns [{ ts: ISO, sender, text }]. Skips GroupMe system lines.
+const GM_SYSTEM_RE = /(has joined the group|has left the group|removed .* from the group|added .* to the group|gave group ownership|A message was deleted|This message was deleted|edited to:|Created new poll|Poll '.*' (is about to expire|has expired))/i;
+
+function gmToISO(raw) {
+  // "2026-05-28 18:00:12 UTC" → ISO
+  const m = String(raw).trim().match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
+  if (!m) { const d = new Date(raw); return isNaN(d) ? null : d.toISOString(); }
+  return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}.000Z`;
+}
+
+function gmKeep(sender, text) {
+  if (!sender || sender === 'GroupMe') return false;
+  if (!text || !text.trim()) return false;
+  if (GM_SYSTEM_RE.test(text)) return false;
+  // Drop bare approvals / very short acks — no information to log.
+  if (/^(approved?|approve both|agree|will do|thanks?|same|done|👍)\b[.! ]*$/i.test(text.trim())) return false;
+  return true;
+}
+
+// Plain-text export: lines like "[YYYY-MM-DD HH:MM:SS UTC] Sender: Text",
+// with multi-line message bodies continuing until the next bracketed timestamp.
+function parseGroupMeText(content) {
+  const lines = String(content).split(/\r?\n/);
+  const head = /^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) UTC\]\s*([^:]+?):\s?([\s\S]*)$/;
+  const out = [];
+  let cur = null;
+  for (const line of lines) {
+    const m = line.match(head);
+    if (m) {
+      if (cur) out.push(cur);
+      cur = { ts: gmToISO(m[1]), sender: m[2].trim(), text: m[3] };
+    } else if (cur) {
+      cur.text += '\n' + line; // continuation of a multi-line message
+    }
+  }
+  if (cur) out.push(cur);
+  return out
+    .map(x => ({ ts: x.ts, sender: x.sender, text: (x.text || '').trim() }))
+    .filter(x => x.ts && gmKeep(x.sender, x.text));
+}
+
+// .xlsx export with columns: UTC Time | Sender | Text. Needs global XLSX (SheetJS).
+function parseGroupMeXlsx(arrayBuffer) {
+  if (typeof XLSX === 'undefined') throw new Error('Spreadsheet support not loaded');
+  const wb = XLSX.read(arrayBuffer, { type: 'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+  return rows
+    .map(r => ({
+      ts: gmToISO(r['UTC Time'] || r['UTC time'] || r['Time'] || r['Date']),
+      sender: String(r['Sender'] || r['sender'] || '').trim(),
+      text: String(r['Text'] || r['text'] || r['Message'] || '').trim(),
+    }))
+    .filter(x => x.ts && gmKeep(x.sender, x.text));
+}
+
+// Latest note/opened date across all opportunities — default sync cutoff so
+// already-recorded history is never re-proposed.
+function latestKnownTs(cases) {
+  let max = 0;
+  (cases || []).forEach(c => {
+    [c.opened, c.lastActivity].forEach(d => { const t = +new Date(d); if (t) max = Math.max(max, t); });
+    (c.notes || []).forEach(n => { const t = +new Date(n.date); if (t) max = Math.max(max, t); });
+  });
+  return max ? new Date(max).toISOString() : '1970-01-01T00:00:00.000Z';
+}
+
+// Compact opportunity list sent to the AI so it can match messages by name/context.
+function compactOpportunities(cases) {
+  return (cases || []).map(c => ({
+    caseNumber: c.caseNumber,
+    name: c.name,
+    status: c.status,
+    lastNoteDate: (c.notes && c.notes[0]) ? fmt3.dateFull(c.notes[0].date) : '',
+    recent: (c.notes && c.notes[0]) ? c.notes[0].text.slice(0, 120) : '',
+  }));
+}
+
 Object.assign(window, {
   TEAM, ME_ID, GROUPME_URL, STATUSES, CASES, fmt3, caseAuthors, caseLastActivity,
   genCaseSummary, findRedactions, maskRedactions, caseSig,
   EVENT_KINDS, eventDetailText, seedEvents,
+  parseGroupMeText, parseGroupMeXlsx, latestKnownTs, compactOpportunities,
 });

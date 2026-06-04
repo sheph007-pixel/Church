@@ -1199,6 +1199,8 @@
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<!-- SheetJS (xlsx) — for parsing uploaded GroupMe spreadsheet exports on the admin Sync screen -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
 <script type="text/babel" src="components/icons.jsx"></script>
 <script type="text/babel" src="v3/data.jsx"></script>
@@ -1362,6 +1364,7 @@ function App() {
   const [cases, setCases] = React.useState(CASES);
   const [team, setTeam] = React.useState(TEAM);
   const [events, setEvents] = React.useState(() => seedEvents());
+  const [sync, setSync] = React.useState(null); // { lastSyncedTs }
   const [q, setQ] = React.useState('');
   const [newOpen, setNewOpen] = React.useState(false);
   const [quickNote, setQuickNote] = React.useState('');
@@ -1386,6 +1389,7 @@ function App() {
               if (Array.isArray(state.cases)) setCases(migrateCases(state.cases));
               if (Array.isArray(state.team)) setTeam(migrateTeam(state.team));
               if (Array.isArray(state.events)) setEvents(state.events);
+              if (state.sync) setSync(state.sync);
             }
           }
           setMeId(sess.meId);
@@ -1477,10 +1481,10 @@ function App() {
       fetch('/api/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cases, team, events }),
+        body: JSON.stringify({ cases, team, events, sync }),
       }).catch(() => {});
     }, 1500);
-  }, [cases, team, events, signedIn]);
+  }, [cases, team, events, sync, signedIn]);
 
   React.useEffect(() => {
     const reload = async () => {
@@ -1494,6 +1498,7 @@ function App() {
             if (Array.isArray(state.cases)) setCases(migrateCases(state.cases));
             if (Array.isArray(state.team)) setTeam(migrateTeam(state.team));
             if (Array.isArray(state.events)) setEvents(state.events);
+            if (state.sync) setSync(state.sync);
           }
         }
       } catch (e) {}
@@ -1636,6 +1641,47 @@ function App() {
     setSelectedId(id);
   };
 
+  // ─── GroupMe Sync: accept handlers (additive only) ───────────────────
+  // Append an imported note dated to the source message; bump lastActivity only
+  // if the imported note is newer. Existing notes are never touched.
+  const acceptNoteSuggestion = (caseNumber, { text, date }) => {
+    const target = cases.find(c => c.caseNumber === caseNumber);
+    if (!target) return false;
+    const noteDate = date ? new Date(date).toISOString() : stamp();
+    setCases(cs => cs.map(c => c.caseNumber !== caseNumber ? c : {
+      ...c,
+      notes: [{ id: 'n' + Date.now() + Math.random().toString(36).slice(2,6), author: meId, date: noteDate, text, source: 'groupme' }, ...c.notes],
+      lastActivity: new Date(noteDate) > new Date(c.lastActivity) ? noteDate : c.lastActivity,
+    }));
+    logEvent(target.id, 'sync_note_imported', { preview: text.slice(0, 80) });
+    return true;
+  };
+  // Create a new opportunity from a suggestion, opened-dated to the source.
+  const acceptNewOpportunity = ({ name, firstNote, date }) => {
+    const usedNums = new Set(cases.map(c => c.caseNumber));
+    let num;
+    do { num = String(Math.floor(Math.random() * 9000) + 1000); } while (usedNums.has(num));
+    const id = 'c' + Date.now() + Math.random().toString(36).slice(2,5);
+    const openedDate = date ? new Date(date).toISOString() : stamp();
+    const newCase = {
+      id, caseNumber: num, name: name || 'Untitled', status: 'active',
+      contacts: [], careTeam: [],
+      opened: openedDate, lastActivity: openedDate,
+      notes: (firstNote && firstNote.trim())
+        ? [{ id: 'n0_' + id, author: meId, date: openedDate, text: firstNote.trim(), source: 'groupme' }]
+        : [],
+      tasks: [], files: [],
+    };
+    setCases(cs => [newCase, ...cs]);
+    logEvent(id, 'sync_opportunity_created', { name: newCase.name });
+    return num;
+  };
+  // Record a completed sync (cutoff advance + audit entry).
+  const recordSync = ({ lastSyncedTs, added, created, dismissed }) => {
+    setSync({ lastSyncedTs });
+    logEvent(null, 'groupme_synced', { added, created, dismissed });
+  };
+
   // ─── Contacts (people we're helping) ─────────────────
   const addContact = (cid, payload) => {
     const id = 'p_' + Date.now();
@@ -1757,6 +1803,11 @@ function App() {
     main = <MembersView team={team} me={me}
               onAddMember={addMember} onUpdateMember={updateMember}
               onRemoveMember={removeMember} onSetLeader={setTeamLeader} />;
+  } else if (nav === 'sync') {
+    main = <SyncView3 me={me} cases={cases} sync={sync}
+              onAcceptNote={acceptNoteSuggestion}
+              onAcceptOpportunity={acceptNewOpportunity}
+              onRecordSync={recordSync} />;
   } else {
     main = <CaseList3 cases={filtered} onSelect={setSelectedId}
               title={searching ? 'Search Results' : titleMap[nav]}

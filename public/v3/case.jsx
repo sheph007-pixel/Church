@@ -214,6 +214,12 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onUpdate, onA
                     <div className="note-meta">
                       <span className="note-author">{a.name}</span>
                       <span className="note-time">{fmt3.dateShort(n.date)}</span>
+                      {n.source === 'groupme' && (
+                        <span className="note-source" title="Imported from a GroupMe export and accepted"
+                              style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, letterSpacing: '.03em', textTransform: 'uppercase', color: '#0369a1', background: '#e0f2fe', borderRadius: 4, padding: '1px 6px' }}>
+                          <Icon name="download" size={9} stroke={2} /> from GroupMe sync
+                        </span>
+                      )}
                     </div>
                   </div>
                   <p className="note-body">{n.text}</p>

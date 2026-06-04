@@ -487,55 +487,121 @@ app.get('/api/patch-v5', async (req, res) => {
   }
 });
 
+// Shared LLM call — Anthropic (preferred) → OpenAI fallback → null. Returns text or null.
+async function callLLM(prompt, maxTokens = 1024) {
+  if (process.env.ANTHROPIC_API_KEY) {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    const data = await response.json();
+    if (data.content && data.content[0]) return data.content[0].text;
+  }
+
+  const openaiKey = process.env.OPENAI_API_KEY || process.env.openai;
+  if (openaiKey) {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openaiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    const data = await response.json();
+    if (data.choices && data.choices[0]) return data.choices[0].message.content;
+  }
+  return null;
+}
+
 app.post('/api/ai/complete', async (req, res) => {
   const { prompt } = req.body;
   if (!prompt) return res.status(400).json({ error: 'No prompt' });
-
   try {
-    if (process.env.ANTHROPIC_API_KEY) {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 1024,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
-      const data = await response.json();
-      if (data.content && data.content[0]) {
-        return res.json({ result: data.content[0].text });
-      }
-    }
-
-    const openaiKey = process.env.OPENAI_API_KEY || process.env.openai;
-    if (openaiKey) {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          max_tokens: 1024,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
-      const data = await response.json();
-      if (data.choices && data.choices[0]) {
-        return res.json({ result: data.choices[0].message.content });
-      }
-    }
-
-    res.json({ result: null });
+    res.json({ result: await callLLM(prompt, 1024) });
   } catch (e) {
     console.error('AI error:', e.message);
     res.json({ result: null });
+  }
+});
+
+// GroupMe Sync — analyze NEW chat messages against EXISTING opportunities and
+// propose additive suggestions only. Returns { ok, suggestions:{noteSuggestions,
+// newOpportunities}, aiAvailable }. Never mutates anything — the client applies
+// accepted items via the normal append-only paths.
+app.post('/api/groupme-suggest', async (req, res) => {
+  const { messages, opportunities } = req.body || {};
+  if (!Array.isArray(messages) || !Array.isArray(opportunities)) {
+    return res.status(400).json({ error: 'messages[] and opportunities[] required' });
+  }
+  if (messages.length === 0) {
+    return res.json({ ok: true, aiAvailable: true, suggestions: { noteSuggestions: [], newOpportunities: [] } });
+  }
+
+  const oppLines = opportunities.map(o =>
+    `- #${o.caseNumber} | ${o.name} | ${o.status} | last note ${o.lastNoteDate || 'n/a'}${o.recent ? ` | recent: ${o.recent}` : ''}`
+  ).join('\n');
+
+  const buildPrompt = (msgs) => `You are helping a church benevolence team catch up their internal records from a GroupMe chat export, ahead of a monthly meeting. You are given the team's EXISTING opportunities and a batch of NEW chat messages. Identify only what is genuinely actionable.
+
+Return STRICT JSON only (no prose, no code fences) with this exact shape:
+{
+  "noteSuggestions": [ { "caseNumber": "<existing # it belongs to>", "date": "YYYY-MM-DD", "text": "<concise note summarizing the update/approval/disbursement>", "source": "<short quote or date from the messages>" } ],
+  "newOpportunities": [ { "name": "<person/family or 'Confidential — ...'>", "date": "YYYY-MM-DD", "firstNote": "<concise opening note>", "source": "<short quote/date>" } ]
+}
+
+RULES:
+- Use ONLY information explicitly in the messages. Do not invent or infer beyond them.
+- noteSuggestions = updates about a person/situation that already matches an EXISTING opportunity (match by name/context). Use that opportunity's "#".
+- newOpportunities = a person/situation NOT represented by any existing opportunity.
+- Ignore bare "Approve"/"Approved" replies, scheduling/logistics chatter, prayer requests, and GroupMe join/left/poll/deleted system lines.
+- Keep notes factual and concise (amounts, dates, what was approved/spent). One suggestion per distinct event.
+- If nothing is actionable, return empty arrays.
+
+EXISTING OPPORTUNITIES:
+${oppLines || '(none)'}
+
+NEW MESSAGES:
+${msgs.map(m => `[${m.ts}] ${m.sender}: ${m.text}`).join('\n')}`;
+
+  const parseJSON = (raw) => {
+    if (!raw) return null;
+    const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+    try { return JSON.parse(cleaned); } catch (e) { return null; }
+  };
+
+  try {
+    // Chunk to keep each call within limits; merge results.
+    const CHUNK = 150;
+    const merged = { noteSuggestions: [], newOpportunities: [] };
+    let sawAI = false;
+    for (let i = 0; i < messages.length; i += CHUNK) {
+      const raw = await callLLM(buildPrompt(messages.slice(i, i + CHUNK)), 4096);
+      if (raw == null) continue; // no API key / failure
+      sawAI = true;
+      const parsed = parseJSON(raw);
+      if (!parsed) continue;
+      if (Array.isArray(parsed.noteSuggestions)) merged.noteSuggestions.push(...parsed.noteSuggestions);
+      if (Array.isArray(parsed.newOpportunities)) merged.newOpportunities.push(...parsed.newOpportunities);
+    }
+    if (!sawAI) return res.json({ ok: false, aiAvailable: false, suggestions: { noteSuggestions: [], newOpportunities: [] } });
+    res.json({ ok: true, aiAvailable: true, suggestions: merged });
+  } catch (e) {
+    console.error('GroupMe suggest error:', e.message);
+    res.status(500).json({ error: e.message, aiAvailable: true });
   }
 });
 
