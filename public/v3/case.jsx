@@ -1,6 +1,56 @@
 // v3 case detail — notes, tasks, files + care team sidebar
 
-function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onUpdate, onAddTask, onToggleTask, onDeleteTask, onAddFile, onDeleteFile, onSelectCase, onAddContact, onEditContact, onRemoveContact, onAddCareTeam, onEditCareTeam, onRemoveCareTeam, onShare, summaryEntry, onEnsureSummary, onRefreshSummary }) {
+// A single note in the timeline. Only the note's author may edit it; an edit
+// marks it "edited" (with the change logged to history) and is shown inline.
+function NoteItem3({ n, author, me, caseId, onEditNote }) {
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(n.text);
+  React.useEffect(() => { setDraft(n.text); setEditing(false); }, [n.id, n.text]);
+  const mine = me && n.author === me.id;
+  return (
+    <article className="note">
+      <div className="note-head">
+        <Av3 id={n.author} size={26} />
+        <div className="note-meta">
+          <span className="note-author">{author.name}</span>
+          <span className="note-time">{fmt3.dateShort(n.date)}</span>
+          {n.editedAt && (
+            <span className="note-edited" title={'Edited ' + fmt3.dateFull(n.editedAt)}
+                  style={{ marginLeft: 6, fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+              · edited
+            </span>
+          )}
+          {n.source === 'groupme' && (
+            <span className="note-source" title="Imported from a GroupMe export and accepted"
+                  style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, letterSpacing: '.03em', textTransform: 'uppercase', color: '#0369a1', background: '#e0f2fe', borderRadius: 4, padding: '1px 6px' }}>
+              <Icon name="download" size={9} stroke={2} /> from GroupMe sync
+            </span>
+          )}
+        </div>
+        {mine && !editing && (
+          <button className="icon-btn" style={{ marginLeft: 'auto' }} title="Edit note"
+                  onClick={() => { setDraft(n.text); setEditing(true); }}>
+            <Icon name="pencil" size={13} stroke={1.7} />
+          </button>
+        )}
+      </div>
+      {editing ? (
+        <div className="composer-body" style={{ marginTop: 6 }}>
+          <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={3} autoFocus />
+          <div className="composer-foot">
+            <button className="link-btn" onClick={() => { setDraft(n.text); setEditing(false); }}>Cancel</button>
+            <Btn3 variant="primary" size="sm" disabled={!draft.trim() || draft.trim() === n.text}
+                  onClick={() => { onEditNote(caseId, n.id, draft.trim()); setEditing(false); }}>Save</Btn3>
+          </div>
+        </div>
+      ) : (
+        <p className="note-body">{n.text}</p>
+      )}
+    </article>
+  );
+}
+
+function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, onUpdate, onAddTask, onToggleTask, onDeleteTask, onAddFile, onDeleteFile, onSelectCase, onAddContact, onEditContact, onRemoveContact, onAddCareTeam, onEditCareTeam, onRemoveCareTeam, onShare, summaryEntry, onEnsureSummary, onRefreshSummary }) {
   const [noteText, setNoteText] = React.useState('');
   const [taskText, setTaskText] = React.useState('');
   const [taskDue, setTaskDue] = React.useState('');
@@ -207,24 +257,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onUpdate, onA
             {c.notes.length === 0 && <div className="empty-line">No notes yet.</div>}
             {c.notes.map(n => {
               const a = team.find(t => t.id === n.author) || { name: 'Admin', initials: 'AD' };
-              return (
-                <article key={n.id} className="note">
-                  <div className="note-head">
-                    <Av3 id={n.author} size={26} />
-                    <div className="note-meta">
-                      <span className="note-author">{a.name}</span>
-                      <span className="note-time">{fmt3.dateShort(n.date)}</span>
-                      {n.source === 'groupme' && (
-                        <span className="note-source" title="Imported from a GroupMe export and accepted"
-                              style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, letterSpacing: '.03em', textTransform: 'uppercase', color: '#0369a1', background: '#e0f2fe', borderRadius: 4, padding: '1px 6px' }}>
-                          <Icon name="download" size={9} stroke={2} /> from GroupMe sync
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <p className="note-body">{n.text}</p>
-                </article>
-              );
+              return <NoteItem3 key={n.id} n={n} author={a} me={me} caseId={c.id} onEditNote={onEditNote} />;
             })}
           </div>
         </section>

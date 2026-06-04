@@ -188,6 +188,7 @@ const EVENT_KINDS = {
   careteam_edited: { label: 'edited care team contact', icon: 'pencil' },
   careteam_removed:{ label: 'removed from care team',icon: 'close' },
   note_added:      { label: 'added a note',        icon: 'note' },
+  note_edited:     { label: 'edited a note',        icon: 'pencil' },
   task_added:      { label: 'added a task',        icon: 'plus' },
   task_completed:  { label: 'completed a task',    icon: 'check' },
   task_reopened:   { label: 'reopened a task',     icon: 'refresh' },
@@ -219,6 +220,7 @@ function eventDetailText(e) {
     case 'careteam_edited':
     case 'careteam_removed': return d.name || '';
     case 'note_added':       return d.preview ? '"' + d.preview + (d.preview.length >= 80 ? '…' : '') + '"' : '';
+    case 'note_edited':      return d.preview ? '"' + d.preview + (d.preview.length >= 80 ? '…' : '') + '"' : '';
     case 'task_added':
     case 'task_completed':
     case 'task_reopened':

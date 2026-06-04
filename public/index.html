@@ -1580,6 +1580,21 @@ function App() {
     }));
     logEvent(cid, 'note_added', { preview: text.slice(0, 80) });
   };
+  // Edit an existing note — only the note's own author may edit. Marks the note
+  // as edited and logs a note_edited event (with the prior text) for the paper trail.
+  const editNote = (cid, noteId, text) => {
+    const c0 = cases.find(c => c.id === cid);
+    const n0 = c0 && c0.notes.find(n => n.id === noteId);
+    if (!n0 || n0.author !== meId) return;        // author-only guard
+    const next = (text || '').trim();
+    if (!next || next === n0.text) return;
+    setCases(cs => cs.map(c => c.id !== cid ? c : {
+      ...c,
+      notes: c.notes.map(n => n.id !== noteId ? n : { ...n, text: next, editedAt: stamp() }),
+      lastActivity: stamp(),
+    }));
+    logEvent(cid, 'note_edited', { preview: next.slice(0, 80), prev: n0.text.slice(0, 80) });
+  };
   const updateCase = (cid, patch) => {
     const prev = cases.find(c => c.id === cid);
     setCases(cs => cs.map(c => c.id !== cid ? c : { ...c, ...patch, lastActivity: stamp() }));
@@ -1811,7 +1826,7 @@ function App() {
   if (selected) {
     const caseEvents = events.filter(e => e.caseId === selected.id);
     main = <CaseDetail3 c={selected} me={me} caseEvents={caseEvents} team={team} onBack={() => setSelectedId(null)}
-            onAddNote={addNote} onUpdate={updateCase}
+            onAddNote={addNote} onEditNote={editNote} onUpdate={updateCase}
             onAddTask={addTask} onToggleTask={toggleTask} onDeleteTask={deleteTask}
             onAddFile={addFile} onDeleteFile={deleteFile}
             onAddContact={addContact} onEditContact={editContact} onRemoveContact={removeContact}
