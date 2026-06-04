@@ -488,7 +488,7 @@ app.get('/api/patch-v5', async (req, res) => {
 });
 
 // Shared LLM call — Anthropic (preferred) → OpenAI fallback → null. Returns text or null.
-async function callLLM(prompt, maxTokens = 1024) {
+async function callLLM(prompt, maxTokens = 1024, model) {
   if (process.env.ANTHROPIC_API_KEY) {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -498,7 +498,7 @@ async function callLLM(prompt, maxTokens = 1024) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: model || 'claude-haiku-4-5-20251001',
         max_tokens: maxTokens,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -528,10 +528,10 @@ async function callLLM(prompt, maxTokens = 1024) {
 }
 
 app.post('/api/ai/complete', async (req, res) => {
-  const { prompt } = req.body;
+  const { prompt, model } = req.body;
   if (!prompt) return res.status(400).json({ error: 'No prompt' });
   try {
-    res.json({ result: await callLLM(prompt, 1024) });
+    res.json({ result: await callLLM(prompt, 1024, model) });
   } catch (e) {
     console.error('AI error:', e.message);
     res.json({ result: null });

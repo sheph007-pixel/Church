@@ -1,8 +1,22 @@
 // v3 app — cases, care team, AI summary, tasks, files, member admin
 
 // ─── UI atoms ───────────────────────────────────────────
+// Resolve a member's avatar (initials + color) from the LIVE team index kept by
+// App (window.MEMBERS_BY_ID), falling back to the bootstrap TEAM, then to a
+// stable color derived from the id so we never show a blank/grey "?" bubble.
+function avMember(id) {
+  const reg = (typeof window !== 'undefined' && window.MEMBERS_BY_ID) || null;
+  const m = (reg && reg[id]) || TEAM.find(t => t.id === id);
+  if (m) return m;
+  const palette = ['#0f766e', '#2563eb', '#7c3aed', '#b45309', '#dc2626', '#0891b2', '#059669', '#9333ea', '#0d9488'];
+  let h = 0; for (let i = 0; i < String(id).length; i++) h = (h * 31 + String(id).charCodeAt(i)) >>> 0;
+  const suffix = String(id || '').replace(/^tm[_]?/, '');
+  const initials = (suffix.match(/[a-z]/gi) || ['?']).slice(0, 2).join('').toUpperCase();
+  return { initials: initials || '?', color: palette[h % palette.length] };
+}
+
 const Av3 = ({ id, size = 24, ring }) => {
-  const m = TEAM.find(t => t.id === id) || { initials: '?', color: '#999' };
+  const m = avMember(id);
   return (
     <div style={{
       width: size, height: size, borderRadius: 99,

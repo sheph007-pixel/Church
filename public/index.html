@@ -1462,6 +1462,22 @@ function App() {
     })();
   }, [logEvent]);
 
+  // Keep already-generated summaries automatically up to date: whenever an
+  // opportunity's content changes (a deacon adds/edits a note, a GroupMe sync
+  // adds one, a task or status changes), regenerate its summary. Bounded to
+  // opportunities that already have a summary, and debounced so rapid edits
+  // collapse into one regeneration.
+  React.useEffect(() => {
+    if (!signedIn) return;
+    const t = setTimeout(() => {
+      cases.forEach(c => {
+        const cur = summariesRef.current[c.id];
+        if (cur && cur.text != null && !cur.loading && cur.sig !== caseSig(c)) ensureSummary(c);
+      });
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [cases, signedIn, ensureSummary]);
+
   // Log sign-in once per session
   React.useEffect(() => {
     if (signedIn) {
@@ -1510,6 +1526,16 @@ function App() {
   }, [signedIn]);
 
   const me = team.find(t => t.id === meId);
+
+  // Live id→member index so avatars (Av3) resolve initials + color for every
+  // deacon (active or past), not just the bootstrap leader. Assigned during
+  // render so children paint with the correct avatars on first frame.
+  const membersById = React.useMemo(() => {
+    const idx = {};
+    team.forEach(m => { idx[m.id] = m; });
+    return idx;
+  }, [team]);
+  window.MEMBERS_BY_ID = membersById;
 
   // Counts per nav item
   const counts = {

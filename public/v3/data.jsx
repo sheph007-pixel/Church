@@ -89,23 +89,23 @@ async function genCaseSummary(c) {
   const notesText = c.notes.slice().reverse()
     .map(n => `[${fmt3.dateFull(n.date)}] ${n.text}`)
     .join('\n\n');
-  const prompt = `You are summarizing a benevolence case file for a church care team. Read these chronological notes and produce a brief status summary.
+  const prompt = `You are writing a short status summary of a church benevolence record for the care team. Use ONLY the notes provided below — nothing else.
 
 STRICT RULES:
-- Only use information explicitly stated in the notes below. Do not infer, invent, or add anything.
-- Do not mention any deacon, staff member, or care team member by name.
-- Do not reference who wrote the notes.
-- Do not use any outside knowledge about people, places, or organizations.
+- Base every statement strictly on the notes below. If the notes don't say it, don't write it.
+- Do not guess, infer beyond what is written, or add any outside facts or assumptions.
+- Do not use outside knowledge about any person, place, employer, or organization.
+- Do not mention deacons, staff, or care-team members by name, or reference who wrote the notes.
 
 NOTES:
 ${notesText}
 
-Write EXACTLY three sentences answering, in order: (1) What's going on with this person/family? (2) What's the latest development? (3) What's the next step or open question? Keep every summary to a consistent length — ${SUMMARY_LEN_NOTE}. Be plain, warm, and specific. No greetings, no preamble. Don't start with "This case" or "The case" — just describe the situation.`;
+Write a clean, plain-language summary of EXACTLY three sentences: (1) the person/family's situation, (2) the most recent development, (3) the current next step or open question. Roughly ${SUMMARY_LEN_NOTE}. No greetings or preamble; don't begin with "This case" or "The case" — just describe the situation.`;
   try {
     const resp = await fetch('/api/ai/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt, model: 'claude-sonnet-4-6' }),
     });
     if (!resp.ok) return null;
     const { result } = await resp.json();
@@ -167,10 +167,13 @@ function maskRedactions(text, phrases) {
   return segments;
 }
 
-// Signature of the content a summary depends on. Changes when a note or task
-// is added / completed, which is what triggers a regeneration.
+// Signature of the content a summary depends on. Changes when a note is
+// added/edited/removed, a task is added/completed, or the status changes —
+// which is what triggers an automatic regeneration so summaries stay current.
 function caseSig(c) {
-  return c.notes.length + '/' + c.tasks.length + '/' + c.tasks.filter(t => t.done).length;
+  const notesPart = (c.notes || []).map(n => (n.date || '') + ':' + (n.text || '').length).join('|');
+  return [c.status, (c.notes || []).length, (c.tasks || []).length,
+          (c.tasks || []).filter(t => t.done).length, notesPart].join('/');
 }
 
 // ─── Audit / event log ──────────────────────────────────
