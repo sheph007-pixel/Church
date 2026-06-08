@@ -1527,6 +1527,54 @@ function App() {
   }, [team]);
   window.MEMBERS_BY_ID = membersById;
 
+  // ─── Shareable URLs (hash routing) ───────────────────
+  // Every tab and opportunity is reflected in the URL hash — e.g. #/active,
+  // #/deacons, #/report, #/sync, #/o/4821 — so a deacon can copy the link and
+  // send someone to the exact spot. Hash-based so it works with the SPA and the
+  // relative asset paths (no server routes needed).
+  const NAV_TO_SLUG = { members: 'deacons', report: 'report', activity: 'activity', sync: 'sync', active: 'active', paused: 'paused', closed: 'closed', all: 'all' };
+  const SLUG_TO_NAV = { deacons: 'members', members: 'members', report: 'report', activity: 'activity', sync: 'sync', active: 'active', paused: 'paused', closed: 'closed', all: 'all' };
+  const casesRef = React.useRef(cases);
+  React.useEffect(() => { casesRef.current = cases; }, [cases]);
+
+  const applyHashRef = React.useRef(() => {});
+  applyHashRef.current = () => {
+    const raw = (window.location.hash || '').replace(/^#\/?/, '').trim();
+    if (!raw) return;
+    const [head, arg] = raw.split('/');
+    if (head === 'o' && arg) {
+      const c = casesRef.current.find(x => x.caseNumber === arg);
+      if (c) setSelectedId(c.id);
+      return; // unknown number → leave current view untouched
+    }
+    if (SLUG_TO_NAV[head]) { setSelectedId(null); setNav(SLUG_TO_NAV[head]); }
+  };
+
+  // React to shared links / manual hash edits / back-forward.
+  React.useEffect(() => {
+    if (!signedIn) return;
+    const onHash = () => applyHashRef.current();
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, [signedIn]);
+
+  // Apply the incoming hash once data is loaded (handles deep links on open).
+  const didInitHash = React.useRef(false);
+  React.useEffect(() => {
+    if (signedIn && !dbLoading && !didInitHash.current) {
+      didInitHash.current = true;
+      applyHashRef.current();
+    }
+  }, [signedIn, dbLoading]);
+
+  // Keep the URL in sync with the current view (silent replace — no history spam).
+  React.useEffect(() => {
+    if (!signedIn) return;
+    const c = selectedId ? cases.find(x => x.id === selectedId) : null;
+    const want = c ? '#/o/' + c.caseNumber : '#/' + (NAV_TO_SLUG[nav] || 'active');
+    if ((window.location.hash || '') !== want) history.replaceState(null, '', want);
+  }, [nav, selectedId, signedIn, cases]);
+
   // Counts per nav item
   const counts = {
     all:    cases.length,
