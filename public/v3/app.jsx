@@ -72,7 +72,7 @@ const Btn3 = ({ variant = 'secondary', icon, children, onClick, size = 'md', dis
 };
 
 // ─── Sidebar ────────────────────────────────────────────
-function Sidebar3({ active, onNav, counts, onNew, me, onSignOut, onSwitchMe, collapsed, onToggleCollapse }) {
+function Sidebar3({ active, onNav, counts, onNew, me, adminUnlocked, onSignOut, onSwitchMe, collapsed, onToggleCollapse }) {
   const items = [
     { id: 'active', icon: 'folder',  label: 'Active',  count: counts.active },
     { id: 'paused', icon: 'clock',   label: 'Paused',  count: counts.paused },
@@ -81,8 +81,7 @@ function Sidebar3({ active, onNav, counts, onNew, me, onSignOut, onSwitchMe, col
   const tools = [
     { id: 'activity', icon: 'history', label: 'Activity Log' },
     { id: 'report',   icon: 'print',   label: 'Monthly Report' },
-    // Leader-only: catch records up from a GroupMe export before the monthly meeting.
-    ...(me && me.isLeader ? [{ id: 'sync', icon: 'download', label: 'GroupMe Sync' }] : []),
+    { id: 'sync',     icon: 'download', label: 'GroupMe Sync' },
   ];
   return (
     <aside className={'sidebar' + (collapsed ? ' sidebar-collapsed' : '')}>
@@ -126,7 +125,9 @@ function Sidebar3({ active, onNav, counts, onNew, me, onSignOut, onSwitchMe, col
             <span className="nav-count">{it.count}</span>
           </button>
         ))}
-        <div className="nav-label">Tools</div>
+        <div className="nav-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          Admin {!adminUnlocked && <Icon name="lock" size={10} stroke={2} />}
+        </div>
         <button onClick={() => onNav('members')} title="Deacons"
           className={'nav-item' + (active === 'members' ? ' active' : '')}>
           <Icon name="users" size={16} stroke={1.7} />

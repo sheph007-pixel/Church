@@ -452,7 +452,6 @@ function AddDeaconModal({ onClose, onAdd }) {
 // existing opportunities + brand-new opportunities). Nothing is written until
 // the leader clicks Accept. Re-uploads are deduped by a moving timestamp cutoff.
 function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecordSync }) {
-  const isLeader = !!(me && me.isLeader);
   const [phase, setPhase] = React.useState('idle'); // idle | analyzing | review | error | done
   const [fileName, setFileName] = React.useState('');
   const [error, setError] = React.useState('');
@@ -462,19 +461,6 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   const [cutoff, setCutoff] = React.useState(null);
   const [newCount, setNewCount] = React.useState(0);
   const [summary, setSummary] = React.useState(null);
-
-  if (!isLeader) {
-    return (
-      <div className="tool-view">
-        <div className="tool-head"><div><h1 className="page-title">GroupMe Sync</h1></div></div>
-        <div className="empty">
-          <Icon name="lock" size={22} stroke={1.5} />
-          <div className="empty-title">Team Leader only</div>
-          <div className="empty-body">Only the Team Leader can sync GroupMe data.</div>
-        </div>
-      </div>
-    );
-  }
 
   const byNum = {};
   cases.forEach(c => { byNum[c.caseNumber] = c; });
@@ -668,4 +654,41 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   );
 }
 
-Object.assign(window, { ReportView3, PrintPreview3, ActivityView3, MembersView, SyncView3 });
+// ─── Admin password gate ────────────────────────────────
+// Guards the whole Admin area (Deacons, Activity Log, Monthly Report, GroupMe
+// Sync). Unlock persists for the browser session.
+const ADMIN_PASSWORD = '8787';
+function AdminGate({ onUnlock, onCancel }) {
+  const [pw, setPw] = React.useState('');
+  const [err, setErr] = React.useState('');
+  const submit = (e) => {
+    e.preventDefault();
+    if (pw === ADMIN_PASSWORD) onUnlock();
+    else { setErr('Incorrect password.'); setPw(''); }
+  };
+  return (
+    <div className="tool-view">
+      <div className="tool-head">
+        <div>
+          <h1 className="page-title">Admin</h1>
+          <div className="page-sub">Enter the admin password to access Deacons, Activity Log, Monthly Report, and GroupMe Sync.</div>
+        </div>
+      </div>
+      <form onSubmit={submit} style={{ maxWidth: 320, marginTop: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <Icon name="lock" size={18} stroke={1.7} />
+          <input type="password" inputMode="numeric" autoFocus value={pw}
+                 onChange={e => { setPw(e.target.value); setErr(''); }}
+                 placeholder="Admin password" className="pin-input" style={{ letterSpacing: '0.3em' }} />
+        </div>
+        {err && <div className="login-error" style={{ marginBottom: 10 }}>{err}</div>}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Btn3 variant="primary" type="submit" disabled={!pw}>Unlock</Btn3>
+          {onCancel && <button type="button" className="link-btn" onClick={onCancel}>Cancel</button>}
+        </div>
+      </form>
+    </div>
+  );
+}
+
+Object.assign(window, { ReportView3, PrintPreview3, ActivityView3, MembersView, SyncView3, AdminGate });

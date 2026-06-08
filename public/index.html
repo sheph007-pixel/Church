@@ -1355,6 +1355,11 @@ function App() {
   const [team, setTeam] = React.useState(TEAM);
   const [events, setEvents] = React.useState(() => seedEvents());
   const [sync, setSync] = React.useState(null); // { lastSyncedTs }
+  // Admin area (Deacons, Activity Log, Monthly Report, GroupMe Sync) is password
+  // gated. Unlocking persists for the browser session.
+  const [adminUnlocked, setAdminUnlocked] = React.useState(() => {
+    try { return sessionStorage.getItem('ib_admin_unlocked') === '1'; } catch (e) { return false; }
+  });
   const [q, setQ] = React.useState('');
   const [newOpen, setNewOpen] = React.useState(false);
   const [quickNote, setQuickNote] = React.useState('');
@@ -1860,6 +1865,7 @@ function App() {
 
   const selected = selectedId ? cases.find(c => c.id === selectedId) : null;
 
+  const ADMIN_NAVS = ['members', 'activity', 'report', 'sync'];
   let main;
   if (selected) {
     const caseEvents = events.filter(e => e.caseId === selected.id);
@@ -1874,6 +1880,9 @@ function App() {
             onEnsureSummary={ensureSummary}
             onRefreshSummary={(c) => ensureSummary(c, true)}
             onSelectCase={setSelectedId} />;
+  } else if (ADMIN_NAVS.includes(nav) && !adminUnlocked) {
+    main = <AdminGate onUnlock={() => { sessionStorage.setItem('ib_admin_unlocked', '1'); setAdminUnlocked(true); }}
+                      onCancel={() => setNav('active')} />;
   } else if (nav === 'report') {
     main = <PrintPreview3 cases={cases} summaries={summaries} onEnsureSummary={ensureSummary} />;
   } else if (nav === 'activity') {
@@ -1882,7 +1891,7 @@ function App() {
     main = <MembersView team={team} me={me}
               onAddMember={addMember} onUpdateMember={updateMember}
               onRemoveMember={removeMember} onSetLeader={setTeamLeader} />;
-  } else if (nav === 'sync' && me && me.isLeader) {
+  } else if (nav === 'sync') {
     main = <SyncView3 me={me} cases={cases} sync={sync}
               onAcceptNote={acceptNoteSuggestion}
               onAcceptOpportunity={acceptNewOpportunity}
@@ -1923,7 +1932,8 @@ function App() {
         counts={counts}
         onNew={() => setNewOpen(true)}
         me={me}
-        onSignOut={() => { localStorage.removeItem('ib_session'); setSignedIn(false); }}
+        adminUnlocked={adminUnlocked}
+        onSignOut={() => { localStorage.removeItem('ib_session'); try { sessionStorage.removeItem('ib_admin_unlocked'); } catch (e) {} setAdminUnlocked(false); setSignedIn(false); }}
         onSwitchMe={setMeId}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(v => !v)}
