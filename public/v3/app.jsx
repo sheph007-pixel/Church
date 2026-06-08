@@ -126,7 +126,7 @@ function Sidebar3({ active, onNav, counts, onNew, me, adminUnlocked, onSignOut, 
           </button>
         ))}
         <div className="nav-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          Admin {!adminUnlocked && <Icon name="lock" size={10} stroke={2} />}
+          Admin Tools {!adminUnlocked && <Icon name="lock" size={10} stroke={2} />}
         </div>
         <button onClick={() => onNav('members')} title="Deacons"
           className={'nav-item' + (active === 'members' ? ' active' : '')}>
