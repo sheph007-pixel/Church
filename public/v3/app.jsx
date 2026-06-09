@@ -111,12 +111,6 @@ function Sidebar3({ active, onNav, counts, onNew, me, adminUnlocked, onSignOut, 
       </button>
       <nav className="sidebar-nav">
         <div className="nav-label">Opportunities</div>
-        <button onClick={() => onNav('all')} title="All Opportunities"
-          className={'nav-item' + (active === 'all' ? ' active' : '')}>
-          <Icon name="folder" size={16} stroke={1.7} />
-          <span>All Opportunities</span>
-          <span className="nav-count">{counts.all}</span>
-        </button>
         {items.map(it => (
           <button key={it.id} onClick={() => onNav(it.id)} title={it.label}
             className={'nav-item' + (active === it.id ? ' active' : '')}>
