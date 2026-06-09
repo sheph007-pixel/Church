@@ -1106,8 +1106,11 @@
   @media (max-width: 768px) {
     .sidebar, .mobile-nav { display: none !important; }
     .mobile-header { display: flex; }
-    .app { display: block; }
-    .main { padding-top: 52px; padding-bottom: 80px; }
+    /* Use natural document scrolling on phones (the desktop shell pins height
+       to 100vh + overflow:hidden, which otherwise clips the page on mobile). */
+    html, body { height: auto; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .app { display: block; height: auto; min-height: 100vh; overflow: visible; }
+    .main { height: auto; overflow: visible; padding-top: 52px; padding-bottom: 96px; }
 
     /* Case list */
     .case-list { padding: 16px; }
@@ -1118,10 +1121,11 @@
     .row-meta, .row-time { display: none; }
 
     /* Case detail: single column, contacts float above body */
-    .detail { display: flex; flex-direction: column; height: auto; min-height: 100vh; }
+    .detail { display: flex; flex-direction: column; height: auto; min-height: 100vh; overflow: visible; }
     .detail-head { display: none; }
     .detail-meta { order: -1; border-left: none; border-bottom: 1px solid var(--border); border-top: none; }
-    .detail-body { padding: 16px; }
+    /* extra bottom padding clears the fixed quick-note bar */
+    .detail-body { padding: 16px 16px 88px; overflow: visible; height: auto; }
 
     /* Desktop-only sections hidden on phone */
     .section-files, .section-history { display: none; }
