@@ -140,6 +140,12 @@ function Sidebar3({ active, onNav, counts, onNew, me, adminUnlocked, onSignOut, 
           <span className="btn-label">Open GroupMe</span>
           <Icon name="chevronRight" size={14} stroke={2} />
         </a>
+        <a href="https://faithpca.ccbchurch.com/goto/forms/170/responses/new" target="_blank" rel="noopener noreferrer"
+           className="groupme-link" title="Open the benevolence request form (CCB)">
+          <Icon name="file" size={16} stroke={1.9} />
+          <span className="btn-label">Request Form</span>
+          <Icon name="chevronRight" size={14} stroke={2} />
+        </a>
         <div className="me-row">
           <Av3 id={me.id} size={28} />
           <div className="me-col">
