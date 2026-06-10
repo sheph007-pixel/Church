@@ -1353,7 +1353,7 @@ function LoginPage3({ team, onLogin }) {
   );
 }
 
-function MobileHeader({ selectedCase, onBack, caseCount, syncing }) {
+function MobileHeader({ selectedCase, onBack, caseCount, syncing, onSignOut }) {
   if (selectedCase) return (
     <div className="mobile-header">
       <button className="icon-btn" style={{ marginLeft: -4 }} onClick={onBack}>
@@ -1372,6 +1372,11 @@ function MobileHeader({ selectedCase, onBack, caseCount, syncing }) {
       <div style={{ fontWeight: 600, fontSize: 15, flex: 1 }}>Internal Benevolence</div>
       <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{caseCount} active</div>
       {syncing && <Icon name="refresh" size={14} stroke={1.8} className="spin" />}
+      {onSignOut && (
+        <button className="icon-btn" style={{ marginLeft: 6 }} title="Sign out" onClick={onSignOut}>
+          <Icon name="logOut" size={16} stroke={1.7} />
+        </button>
+      )}
     </div>
   );
 }
@@ -1390,6 +1395,12 @@ function App() {
   const [adminUnlocked, setAdminUnlocked] = React.useState(() => {
     try { return sessionStorage.getItem('ib_admin_unlocked') === '1'; } catch (e) { return false; }
   });
+  const signOut = () => {
+    localStorage.removeItem('ib_session');
+    try { sessionStorage.removeItem('ib_admin_unlocked'); } catch (e) {}
+    setAdminUnlocked(false);
+    setSignedIn(false);
+  };
   const [q, setQ] = React.useState('');
   const [newOpen, setNewOpen] = React.useState(false);
   const [quickNote, setQuickNote] = React.useState('');
@@ -1404,6 +1415,15 @@ function App() {
   const [dbLoading, setDbLoading] = React.useState(true);
   React.useEffect(() => {
     (async () => {
+      // Load the deacon roster first so anyone (not just the leader) can be
+      // matched at the login screen. Case data is NOT loaded until sign-in.
+      try {
+        const r = await fetch('/api/roster');
+        if (r.ok) {
+          const { team } = await r.json();
+          if (Array.isArray(team) && team.length) setTeam(migrateTeam(team));
+        }
+      } catch (e) {}
       try {
         const sess = JSON.parse(localStorage.getItem('ib_session') || 'null');
         if (sess && sess.meId) {
@@ -1955,7 +1975,7 @@ function App() {
   return (
     <div className="app">
       <MobileHeader selectedCase={selected} onBack={() => setSelectedId(null)}
-                    caseCount={counts.active} syncing={syncing} />
+                    caseCount={counts.active} syncing={syncing} onSignOut={signOut} />
       <Sidebar3
         active={selected ? null : nav}
         onNav={(n) => { setNav(n); setSelectedId(null); }}
@@ -1963,7 +1983,7 @@ function App() {
         onNew={() => setNewOpen(true)}
         me={me}
         adminUnlocked={adminUnlocked}
-        onSignOut={() => { localStorage.removeItem('ib_session'); try { sessionStorage.removeItem('ib_admin_unlocked'); } catch (e) {} setAdminUnlocked(false); setSignedIn(false); }}
+        onSignOut={signOut}
         onSwitchMe={setMeId}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(v => !v)}

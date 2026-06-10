@@ -72,6 +72,20 @@ app.get('/api/state', async (req, res) => {
   }
 });
 
+// Minimal roster (deacons only) for the login screen — lets any deacon be
+// matched by email before sign-in WITHOUT exposing confidential case data.
+app.get('/api/roster', async (req, res) => {
+  if (!pool) return res.json({ team: [] });
+  try {
+    const { rows } = await pool.query("SELECT state FROM app_state WHERE id = 'singleton'");
+    const team = rows[0] && rows[0].state && Array.isArray(rows[0].state.team) ? rows[0].state.team : [];
+    res.json({ team });
+  } catch (e) {
+    console.error('Roster read error:', e.message);
+    res.json({ team: [] });
+  }
+});
+
 app.post('/api/state', async (req, res) => {
   if (!pool) return res.json({ ok: false });
   try {
