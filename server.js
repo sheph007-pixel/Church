@@ -577,7 +577,7 @@ app.post('/api/groupme-suggest', async (req, res) => {
   }
 
   const oppLines = opportunities.map(o =>
-    `- #${o.caseNumber} | ${o.name} | ${o.status} | last note ${o.lastNoteDate || 'n/a'}${o.recent ? ` | recent: ${o.recent}` : ''}`
+    `- #${o.caseNumber} | ${o.name} | ${o.status}\n    recorded notes: ${o.recorded || o.recent || '(none)'}`
   ).join('\n');
 
   const buildPrompt = (msgs) => `You are helping a church benevolence team catch up their internal records from a GroupMe chat export, ahead of a monthly meeting. You are given the team's EXISTING opportunities and a batch of NEW chat messages. Identify only what is genuinely actionable.
@@ -590,11 +590,16 @@ Return STRICT JSON only (no prose, no code fences) with this exact shape:
 
 RULES:
 - Use ONLY information explicitly in the messages. Do not invent or infer beyond them.
-- noteSuggestions = updates about a person/situation that already matches an EXISTING opportunity (match by name/context). Use that opportunity's "#".
+- ADDITIVE ONLY: propose what is MISSING from the records. Do NOT propose anything already reflected in an
+  opportunity's "recorded notes" below — if the event (same person + amount/decision) is already recorded,
+  skip it. Never restate or "correct" existing notes.
+- noteSuggestions = a genuinely new update about a person/situation that already matches an EXISTING
+  opportunity (match by name/context) and is NOT already in its recorded notes. Use that opportunity's "#".
 - newOpportunities = a person/situation NOT represented by any existing opportunity.
-- Ignore bare "Approve"/"Approved" replies, scheduling/logistics chatter, prayer requests, and GroupMe join/left/poll/deleted system lines.
+- Ignore bare "Approve"/"Approved" replies, scheduling/logistics chatter, prayer requests, general
+  discussion, and GroupMe join/left/poll/deleted system lines. When in doubt, leave it out.
 - Keep notes factual and concise (amounts, dates, what was approved/spent). One suggestion per distinct event.
-- If nothing is actionable, return empty arrays.
+- If nothing is actionable/missing, return empty arrays.
 
 EXISTING OPPORTUNITIES:
 ${oppLines || '(none)'}

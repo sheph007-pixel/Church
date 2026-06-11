@@ -461,6 +461,7 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   const [cutoff, setCutoff] = React.useState(null);
   const [newCount, setNewCount] = React.useState(0);
   const [summary, setSummary] = React.useState(null);
+  const [fullScan, setFullScan] = React.useState(false); // ignore the date cutoff and analyze everything
 
   const byNum = {};
   cases.forEach(c => { byNum[c.caseNumber] = c; });
@@ -502,7 +503,9 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
         setError('No GroupMe messages found in that selection. Upload the export folder (or its message.json / .txt / .xlsx).');
         setPhase('error'); return;
       }
-      const cut = (sync && sync.lastSyncedTs) ? sync.lastSyncedTs : latestKnownTs(cases);
+      const cut = fullScan
+        ? '1970-01-01T00:00:00.000Z'
+        : ((sync && sync.lastSyncedTs) ? sync.lastSyncedTs : latestKnownTs(cases));
       setCutoff(cut);
       const fresh = parsed.filter(m => new Date(m.ts) > new Date(cut));
       setNewCount(fresh.length);
@@ -587,11 +590,19 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
             <Icon name="file" size={16} stroke={1.7} />
             <span className="page-sub" style={{ margin: 0 }}>…or a single file (message.json, .txt, .csv, or .xlsx)</span>
           </label>
-          {sync && sync.lastSyncedTs && (
-            <div className="page-sub" style={{ marginTop: 12 }}>
-              Last synced through <strong>{fmt3.dateFull(sync.lastSyncedTs)}</strong>. Only messages after that are analyzed.
-            </div>
-          )}
+
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 14, cursor: 'pointer', fontSize: 13.5 }}>
+            <input type="checkbox" checked={fullScan} onChange={e => setFullScan(e.target.checked)} style={{ marginTop: 2 }} />
+            <span>
+              <strong>Scan the entire export</strong> — check the full history for anything missing, not just
+              recent messages. Recommended for a thorough catch-up; you'll still review and Accept each item.
+            </span>
+          </label>
+          <div className="page-sub" style={{ marginTop: 10 }}>
+            {fullScan
+              ? 'Every message in the export will be checked against existing records; already-recorded items are skipped by the AI, and you approve anything it proposes.'
+              : <>By default, messages already covered (through <strong>{fmt3.dateFull((sync && sync.lastSyncedTs) ? sync.lastSyncedTs : latestKnownTs(cases))}</strong>, the latest recorded activity) are treated as done and skipped — only newer ones are analyzed. This is a coverage date, not your upload date. Tick the box above to re-check everything.</>}
+          </div>
           {phase === 'error' && (
             <div style={{ marginTop: 14, padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#b91c1c', fontSize: 13 }}>
               <Icon name="alert" size={14} stroke={1.9} /> {error}

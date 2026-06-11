@@ -384,7 +384,12 @@ function compactOpportunities(cases) {
     name: c.name,
     status: c.status,
     lastNoteDate: (c.notes && c.notes[0]) ? fmt3.dateFull(c.notes[0].date) : '',
-    recent: (c.notes && c.notes[0]) ? c.notes[0].text.slice(0, 120) : '',
+    // Condensed recorded history so the AI can tell what's ALREADY logged and
+    // avoid re-proposing it (capped to keep the prompt reasonable).
+    recorded: (c.notes || [])
+      .map(n => `(${fmt3.dateFull(n.date)}) ${n.text}`)
+      .join(' • ')
+      .slice(0, 1200),
   }));
 }
 
