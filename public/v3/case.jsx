@@ -54,6 +54,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
   const [noteText, setNoteText] = React.useState('');
   const [taskText, setTaskText] = React.useState('');
   const [taskDue, setTaskDue] = React.useState('');
+  const [taskOwner, setTaskOwner] = React.useState(me.id);
   const [editingName, setEditingName] = React.useState(false);
   const [nameDraft, setNameDraft] = React.useState(c.name);
   const [showDone, setShowDone] = React.useState(false);
@@ -63,6 +64,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
     setNoteText('');
     setTaskText('');
     setTaskDue('');
+    setTaskOwner(me.id);
     setEditingName(false);
     setNameDraft(c.name);
     setShowDone(false);
@@ -117,9 +119,10 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
   };
   const postTask = () => {
     if (!taskText.trim()) return;
-    onAddTask(c.id, taskText, taskDue || null);
+    onAddTask(c.id, taskText, taskDue || null, taskOwner || me.id);
     setTaskText('');
     setTaskDue('');
+    setTaskOwner(me.id);
   };
   const saveName = () => {
     if (nameDraft.trim() && nameDraft !== c.name) onUpdate(c.id, { name: nameDraft.trim() });
@@ -183,7 +186,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
           <div className="section-head">
             <h2>
               Tasks
-              <span className="section-count">{openTasks.length} open{doneTasks.length > 0 ? ` · ${doneTasks.length} done` : ''}</span>
+              <span className="section-count">{openTasks.length} open{doneTasks.length > 0 ? ` · ${doneTasks.length} completed` : ''}</span>
             </h2>
           </div>
           {canEdit && (
@@ -193,6 +196,14 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
                 placeholder="Add a task — e.g. 'Call landlord by Friday'" />
               {taskText.trim() && (
                 <>
+                  <select className="task-add-owner" value={taskOwner}
+                          onChange={e => setTaskOwner(e.target.value)}
+                          title="Who's responsible for this task"
+                          style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '6px 8px', fontFamily: 'var(--font)', fontSize: 13, background: 'var(--bg)', color: 'var(--text)' }}>
+                    {team.filter(t => !t.inactive).map(t => (
+                      <option key={t.id} value={t.id}>{t.name}{t.id === me.id ? ' (you)' : ''}</option>
+                    ))}
+                  </select>
                   <label className="task-add-due" title="Due date (optional)">
                     <Icon name="calendar" size={14} stroke={1.8} />
                     <input type="date" value={taskDue}
@@ -216,7 +227,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
                   <Icon name="chevronDown" size={12} stroke={2}
                         style={{ transform: showDone ? 'none' : 'rotate(-90deg)',
                                  transition: 'transform 150ms' }} />
-                  Done ({doneTasks.length})
+                  Completed ({doneTasks.length})
                 </button>
               </li>
             )}
@@ -364,7 +375,8 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
 }
 
 function TaskRow({ task, onToggle, onDelete, canEdit }) {
-  const assignee = TEAM.find(t => t.id === task.assignee);
+  const reg = (typeof window !== 'undefined' && window.MEMBERS_BY_ID) || {};
+  const assignee = task.assignee ? (reg[task.assignee] || TEAM.find(t => t.id === task.assignee)) : null;
   return (
     <li className={'task' + (task.done ? ' task-done' : '')}>
       <button

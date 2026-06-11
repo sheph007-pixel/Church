@@ -1715,9 +1715,9 @@ function App() {
       logEvent(cid, 'care_notes_edited', { preview: patch.careTeamNotes.slice(0, 80) });
     }
   };
-  const addTask = (cid, text, due) => {
+  const addTask = (cid, text, due, assignee) => {
     setCases(cs => cs.map(c => c.id !== cid ? c : {
-      ...c, tasks: [...c.tasks, { id: 't' + Date.now(), text, done: false, assignee: meId, due: due || undefined }],
+      ...c, tasks: [...c.tasks, { id: 't' + Date.now(), text, done: false, assignee: assignee || meId, due: due || undefined }],
       lastActivity: stamp(),
     }));
     logEvent(cid, 'task_added', { text });

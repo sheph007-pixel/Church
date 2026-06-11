@@ -29,7 +29,7 @@ if (pool) {
 // authoritative seed (preserving the activity log). Version-gated so it runs only
 // once and never fights later edits. The marker lives in its own row so the
 // client's {cases,team,events} autosave can't clobber it.
-const DATA_VERSION = 2;
+const DATA_VERSION = 3;
 async function reconcileData() {
   if (!pool) return;
   try {
@@ -41,15 +41,26 @@ async function reconcileData() {
     if (rows[0] && rows[0].state) {
       const { TEAM, CASES } = require('./scripts/seed.js');
       const state = JSON.parse(JSON.stringify(rows[0].state));
-      state.team = TEAM;     // refreshes emails + adds inactive past deacons
-      state.cases = CASES;   // authoritative cases (correct dates/amounts/notes)
-      // state.events (activity log) is preserved as-is.
+
+      if (applied < 2) {
+        // First reconcile: authoritative team + cases (only on un-reconciled DBs).
+        state.team = TEAM;
+        state.cases = CASES;
+      }
+      if (applied < 3) {
+        // Remove auto-generated (seeded) tasks — ids prefixed 't_'. Deacon-added
+        // tasks (id 't<timestamp>', no underscore) and everything else are kept.
+        (state.cases || []).forEach(c => {
+          if (Array.isArray(c.tasks)) c.tasks = c.tasks.filter(t => !/^t_/.test(t.id || ''));
+        });
+      }
+
       await pool.query(
         `INSERT INTO app_state (id, state) VALUES ('singleton', $1)
          ON CONFLICT (id) DO UPDATE SET state = $1, updated_at = NOW()`,
         [state]
       );
-      console.log(`Data reconcile v${DATA_VERSION}: ${CASES.length} cases, ${TEAM.length} team members written.`);
+      console.log(`Data reconcile -> v${DATA_VERSION} applied (was v${applied}).`);
     }
     await pool.query(
       `INSERT INTO app_state (id, state) VALUES ('datamigration', $1)

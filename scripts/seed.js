@@ -76,9 +76,7 @@ const CASES = [
     careTeam: [
       { id: 'ct_24001_1', name: 'Derek Cavin', role: 'Deacon Lead' },
     ],
-    tasks: [
-      { id: 't_24001_1', text: 'Confirm Odyssey repairs are complete and she is back in her own vehicle', done: false, assignee: 'tm_dc' },
-    ],
+    tasks: [],
     notes: [
       { id: 'n_24001_0', author: 'tm_dc', date: '2026-05-28T12:00:00.000Z',
         text: 'Approved $350 for what Derek flagged as the final car rental (May 28 poll). Rental phase recap after her bankruptcy cleared the way: $750 on May 11 (incl. a $500 refundable deposit), $250 on May 14, and $350 on May 28.' },
@@ -122,10 +120,7 @@ const CASES = [
       { id: 'ct_24002_2', name: 'Shelby Seagrest', role: 'Care Team' },
       { id: 'ct_24002_3', name: 'David Marsh', role: 'Care Team (rolled off)' },
     ],
-    tasks: [
-      { id: 't_24002_1', text: 'Monitor child-support case — ex is 2+ months behind on $500/mo', done: false, assignee: 'tm_ts' },
-      { id: 't_24002_2', text: 'Find a replacement care-team deacon now that Dave Marsh has rolled off', done: false, assignee: 'tm_ts' },
-    ],
+    tasks: [],
     notes: [
       { id: 'n_24002_1', author: 'tm_ts', date: '2026-05-26T12:00:00.000Z',
         text: 'Approved $2,000 to get her through June. Two setbacks this month: no child support for two months and two unpaid leave days. She paid June rent and bills and was left with about $50 until her July paycheck. Child support is $500/mo; she has talked to her attorney about next steps.' },
@@ -169,9 +164,7 @@ const CASES = [
     careTeam: [
       { id: 'ct_24003_1', name: 'Timothy Smith', role: 'Deacon Lead' },
     ],
-    tasks: [
-      { id: 't_24003_1', text: 'Form a care team now that Ali is back from Turkey and transferring to Chelsea', done: false, assignee: 'tm_ts' },
-    ],
+    tasks: [],
     notes: [
       { id: 'n_24003_1', author: 'tm_ts', date: '2026-05-27T12:00:00.000Z',
         text: 'Approved $1,047 for June rent (due June 5). He is transferring from the Valleydale Domino’s to the Chelsea location for more hours and has spent close to $3,000 on car repairs lately. He says he won’t need further help this year once the transfer goes through.' },
@@ -303,11 +296,7 @@ const CASES = [
       { id: 'ct_25001_1', name: 'Keith Cooke', role: 'Deacon Lead' },
       { id: 'ct_25001_2', name: 'Grady Trammell', role: 'Referring Elder' },
     ],
-    tasks: [
-      { id: 't_25001_1', text: 'Follow up with Jon on the Moultrie mechanical-engineer interview', done: false, assignee: 'tm_kc' },
-      { id: 't_25001_2', text: 'Confirm timing of Alicia’s shoulder surgery and insurance coverage', done: false, assignee: 'tm_kc' },
-      { id: 't_25001_3', text: 'Process July COBRA payment when due', done: false, assignee: 'tm_kc' },
-    ],
+    tasks: [],
     notes: [
       { id: 'n_25001_1', author: 'tm_kc', date: '2026-05-27T12:00:00.000Z',
         text: 'Approved $1,973.90 for June COBRA (poll). Jon is very discouraged by the ongoing unemployment but has two more follow-up interviews this week. Keith is out of town and asked the team for backup support and encouragement; Grady (elder) is being kept updated.' },
@@ -341,9 +330,7 @@ const CASES = [
       { id: 'ct_25002_2', name: 'Amber Peterson', role: 'Care Team' },
       { id: 'ct_25002_3', name: 'Keith Belcher', role: 'Care Team (temporary)' },
     ],
-    tasks: [
-      { id: 't_25002_1', text: 'Follow up with Amanda on health-insurance renewal and overall stability', done: false, assignee: 'tm_rs' },
-    ],
+    tasks: [],
     notes: [
       { id: 'n_25002_1', author: 'tm_rs', date: '2026-04-16T12:00:00.000Z',
         text: 'Septic resolved. Total came to $1,673: $631 pump-out + $850 mini-excavator to access the tank + $192 to repair her mower (Keith Belcher). Also a second $1,405 health-insurance premium + a $300 Walmart card. After the $1,000 already approved on Mar 31, the new ask was $2,378 — repair work from the Deacon’s Fund, insurance and gift card from the IB budget. She is taking steps to improve her situation and is grateful.' },
@@ -368,9 +355,7 @@ const CASES = [
       { id: 'p_25003_2', name: 'Kelcey Alexander', phone: '', email: '', role: 'Spouse' },
     ],
     careTeam: [],
-    tasks: [
-      { id: 't_25003_1', text: 'Follow up on counseling progress at Insights', done: false, assignee: 'tm10' },
-    ],
+    tasks: [],
     notes: [
       { id: 'n_25003_1', author: 'tm_dm', date: '2026-04-15T12:00:00.000Z',
         text: 'Case opened. Referred by Bradley Moore (their KC). Shane and Kelcey are struggling in their marriage and staff suggested Insights Counseling. Approved the standard $1,500 to get them started. Status paused pending counseling progress.' },
@@ -392,9 +377,7 @@ const CASES = [
     careTeam: [
       { id: 'ct_25004_1', name: 'Keith Cooke', role: 'Deacon Lead' },
     ],
-    tasks: [
-      { id: 't_25004_1', text: 'Check in with Robert — confirm A/C repair resolved and family is stable', done: false, assignee: 'tm_kc' },
-    ],
+    tasks: [],
     notes: [
       { id: 'n_25004_1', author: 'tm_kc', date: '2026-05-20T12:00:00.000Z',
         text: 'Approved $1,500 for an A/C repair (faulty thermal expansion valve) on top of the recent $1,331 — needed urgently for his family.' },
@@ -416,9 +399,7 @@ const CASES = [
     careTeam: [
       { id: 'ct_25005_1', name: 'Derek Cavin', role: 'Referring Deacon' },
     ],
-    tasks: [
-      { id: 't_25005_1', text: 'Follow up on counseling progress at Blue Lake (Melea Stephens)', done: false, assignee: 'tm_dc' },
-    ],
+    tasks: [],
     notes: [
       { id: 'n_25005_1', author: 'tm_dc', date: '2026-05-13T12:00:00.000Z',
         text: 'Case opened. Referred by their Covenant KC elder. Approved $1,500 for roughly 9–10 marriage-counseling sessions with Melea Stephens at Blue Lake Christian Clinic — the couple’s first round. Sent to the full diaconate for final approval. Names kept confidential.' },
