@@ -465,16 +465,43 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   const byNum = {};
   cases.forEach(c => { byNum[c.caseNumber] = c; });
 
-  const readFile = async (file) => {
-    if (/\.xlsx?$/i.test(file.name)) return parseGroupMeXlsx(await file.arrayBuffer());
-    return parseGroupMeText(await file.text());
+  // Parse one file by type → [{ts,sender,text}]. Unknown/media files yield [].
+  const readOne = async (file) => {
+    const n = (file.name || '').toLowerCase();
+    try {
+      if (/\.xlsx?$/.test(n)) return parseGroupMeXlsx(await file.arrayBuffer());
+      if (/\.json$/.test(n)) return parseGroupMeJson(await file.text());
+      if (/\.(txt|csv)$/.test(n)) return parseGroupMeText(await file.text());
+    } catch (e) { return []; }
+    return []; // images / other files in the export folder are ignored
   };
 
-  const onFile = async (file) => {
-    if (!file) return;
-    setFileName(file.name); setError(''); setDecisions({}); setSummary(null); setPhase('analyzing');
+  // Accept a single file OR a whole folder (GroupMe export). Merge + dedupe.
+  const collectMessages = async (fileList) => {
+    const files = Array.from(fileList || []);
+    const all = [];
+    for (const f of files) all.push(...await readOne(f));
+    const seen = new Set();
+    const merged = [];
+    for (const m of all) {
+      const k = m.ts + '|' + m.sender + '|' + m.text;
+      if (!seen.has(k)) { seen.add(k); merged.push(m); }
+    }
+    return merged.sort((a, b) => new Date(a.ts) - new Date(b.ts));
+  };
+
+  const onPick = async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    const label = files.length === 1 ? files[0].name
+      : (files[0].webkitRelativePath ? files[0].webkitRelativePath.split('/')[0] + '/' : `${files.length} files`);
+    setFileName(label); setError(''); setDecisions({}); setSummary(null); setPhase('analyzing');
     try {
-      const parsed = await readFile(file);
+      const parsed = await collectMessages(files);
+      if (parsed.length === 0) {
+        setError('No GroupMe messages found in that selection. Upload the export folder (or its message.json / .txt / .xlsx).');
+        setPhase('error'); return;
+      }
       const cut = (sync && sync.lastSyncedTs) ? sync.lastSyncedTs : latestKnownTs(cases);
       setCutoff(cut);
       const fresh = parsed.filter(m => new Date(m.ts) > new Date(cut));
@@ -538,8 +565,10 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
         <div>
           <h1 className="page-title">GroupMe Sync</h1>
           <div className="page-sub">
-            Upload the latest GroupMe export (.txt or .xlsx). AI proposes additive updates only — nothing is
-            changed until you Accept, and it never edits or removes what deacons entered.
+            Upload your GroupMe export folder. AI finds only what's missing and proposes it as additive
+            notes/opportunities — nothing is changed until you Accept, it never edits or removes anything
+            already in a case, and it skips chatter that doesn't match an opportunity. Accepted items are
+            saved by you (admin) and tagged "from GroupMe."
           </div>
         </div>
       </div>
@@ -547,10 +576,16 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
       {(phase === 'idle' || phase === 'error') && (
         <>
           <label className="file-drop" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '20px', border: '1px dashed #cbd5e1', borderRadius: 10, cursor: 'pointer' }}>
-            <input type="file" accept=".txt,.xlsx,.xls" hidden
-                   onChange={e => onFile(e.target.files[0])} />
+            <input type="file" webkitdirectory="" directory="" multiple hidden
+                   onChange={e => onPick(e.target.files)} />
             <Icon name="upload" size={18} stroke={1.7} />
-            <span>Choose a GroupMe export to analyze — <strong>.txt or .xlsx</strong></span>
+            <span>Upload the GroupMe export <strong>folder</strong> — the whole folder, media and all</span>
+          </label>
+          <label className="file-drop" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', marginTop: 10, border: '1px dashed #cbd5e1', borderRadius: 10, cursor: 'pointer' }}>
+            <input type="file" accept=".json,.txt,.csv,.xlsx,.xls" hidden
+                   onChange={e => onPick(e.target.files)} />
+            <Icon name="file" size={16} stroke={1.7} />
+            <span className="page-sub" style={{ margin: 0 }}>…or a single file (message.json, .txt, .csv, or .xlsx)</span>
           </label>
           {sync && sync.lastSyncedTs && (
             <div className="page-sub" style={{ marginTop: 12 }}>

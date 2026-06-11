@@ -335,6 +335,22 @@ function parseGroupMeText(content) {
     .filter(x => x.ts && gmKeep(x.sender, x.text));
 }
 
+// GroupMe data-export JSON (message.json / conversation.json): an array of
+// message objects { created_at (unix seconds), name, text, system, ... }, or an
+// object with a .messages array.
+function parseGroupMeJson(content) {
+  let arr;
+  try { arr = JSON.parse(content); } catch (e) { return []; }
+  if (!Array.isArray(arr)) arr = (arr && Array.isArray(arr.messages)) ? arr.messages : [];
+  return arr
+    .map(m => ({
+      ts: m.created_at ? new Date(Number(m.created_at) * 1000).toISOString() : (m.ts || null),
+      sender: (m.name || m.sender || (m.system ? 'GroupMe' : '')).toString().trim(),
+      text: (m.text || '').toString().trim(),
+    }))
+    .filter(x => x.ts && gmKeep(x.sender, x.text));
+}
+
 // .xlsx export with columns: UTC Time | Sender | Text. Needs global XLSX (SheetJS).
 function parseGroupMeXlsx(arrayBuffer) {
   if (typeof XLSX === 'undefined') throw new Error('Spreadsheet support not loaded');
@@ -376,5 +392,5 @@ Object.assign(window, {
   TEAM, ME_ID, GROUPME_URL, STATUSES, CASES, fmt3, caseAuthors, caseLastActivity,
   genCaseSummary, findRedactions, maskRedactions, caseSig,
   EVENT_KINDS, eventDetailText, seedEvents,
-  parseGroupMeText, parseGroupMeXlsx, latestKnownTs, compactOpportunities,
+  parseGroupMeText, parseGroupMeXlsx, parseGroupMeJson, latestKnownTs, compactOpportunities,
 });
