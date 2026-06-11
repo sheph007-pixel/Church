@@ -290,7 +290,7 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
                 <div className="row-meta" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
                   {(c.assignees && c.assignees.length)
                     ? <AssigneeBadges ids={c.assignees} />
-                    : <AvStack3 ids={caseAuthors(c)} size={20} />}
+                    : <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>Unassigned</span>}
                   {openTasks > 0 && (
                     <span className="task-badge">
                       <Icon name="check" size={11} stroke={2} /> {openTasks}

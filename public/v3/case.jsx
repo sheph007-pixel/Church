@@ -310,13 +310,15 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
 
       {/* Right meta sidebar: assigned deacons + contacts */}
       <aside className="detail-meta">
-        <div className="meta-section">
-          <div className="meta-label-row">
-            <span className="meta-label">Assigned Deacons</span>
-            <span className="meta-count">{(c.assignees || []).length}/2</span>
+        <div className="meta-section" style={{ background: 'var(--primary-soft)', border: '1px solid var(--border-strong)', borderRadius: 'var(--r-lg)', padding: '14px', marginBottom: 20 }}>
+          <div className="meta-label-row" style={{ marginBottom: 8 }}>
+            <span className="meta-label" style={{ fontWeight: 800, color: 'var(--primary)', fontSize: 12.5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              <Icon name="users" size={13} stroke={2} /> Assigned Deacons
+            </span>
+            <span className="meta-count" style={{ fontWeight: 700, color: 'var(--primary)' }}>{(c.assignees || []).length}/2</span>
           </div>
           {(c.assignees || []).length === 0 && (
-            <div className="empty-line" style={{ fontSize: 13, color: 'var(--text-muted)', padding: '6px 0' }}>
+            <div className="empty-line" style={{ fontSize: 13, color: 'var(--text-muted)', padding: '2px 0 6px' }}>
               No deacons assigned yet. Aim for 2 per opportunity.
             </div>
           )}
