@@ -461,7 +461,7 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   const [cutoff, setCutoff] = React.useState(null);
   const [newCount, setNewCount] = React.useState(0);
   const [summary, setSummary] = React.useState(null);
-  const [fullScan, setFullScan] = React.useState(false); // ignore the date cutoff and analyze everything
+  const [fullScan, setFullScan] = React.useState(true); // default: scan the whole export (AI de-dupes against recorded notes)
 
   const byNum = {};
   cases.forEach(c => { byNum[c.caseNumber] = c; });
@@ -615,18 +615,18 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
         <div className="empty">
           <Icon name="refresh" size={22} stroke={1.7} className="spin" />
           <div className="empty-title">Analyzing {fileName}…</div>
-          <div className="empty-body">Reading new messages and checking them against existing opportunities.</div>
+          <div className="empty-body">Reading the export and checking it against existing records. A full scan of a large export can take a minute.</div>
         </div>
       )}
 
       {phase === 'review' && total === 0 && (
         <div className="empty">
           <Icon name="check" size={22} stroke={1.6} />
-          <div className="empty-title">Nothing new to add</div>
+          <div className="empty-title">Nothing missing to add</div>
           <div className="empty-body">
             {newCount === 0
-              ? `No messages after the last sync point (${cutoff ? fmt3.dateFull(cutoff) : 'n/a'}).`
-              : 'The AI found no new approvals or situations to record in the new messages.'}
+              ? `No messages newer than the last sync point (${cutoff ? fmt3.dateFull(cutoff) : 'n/a'}). Tick "Scan the entire export" to re-check the full history.`
+              : `Checked ${newCount} message${newCount === 1 ? '' : 's'} — your records already cover everything in the export. Nothing missing to add.`}
           </div>
           <div style={{ marginTop: 14 }}>
             <Btn3 variant="primary" onClick={finish}>Done</Btn3>
