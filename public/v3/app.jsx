@@ -93,7 +93,7 @@ const Btn3 = ({ variant = 'secondary', icon, children, onClick, size = 'md', dis
 };
 
 // ─── Sidebar ────────────────────────────────────────────
-function Sidebar3({ active, onNav, counts, onNew, me, adminUnlocked, onSignOut, onSwitchMe, collapsed, onToggleCollapse }) {
+function Sidebar3({ active, onNav, counts, onNew, me, adminUnlocked, versionLabel, onSignOut, onSwitchMe, collapsed, onToggleCollapse }) {
   const items = [
     { id: 'active', icon: 'folder',  label: 'Active',  count: counts.active },
     { id: 'paused', icon: 'clock',   label: 'Paused',  count: counts.paused },
@@ -178,7 +178,7 @@ function Sidebar3({ active, onNav, counts, onNew, me, adminUnlocked, onSignOut, 
           </button>
         </div>
         <div className="version-line" style={{ fontSize: 10, color: 'var(--text-faint)', textAlign: 'center', marginTop: 8, letterSpacing: '0.02em' }}>
-          {APP_VERSION}
+          {versionLabel || APP_VERSION}
         </div>
       </div>
     </aside>

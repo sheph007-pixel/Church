@@ -1395,6 +1395,15 @@ function App() {
   const [adminUnlocked, setAdminUnlocked] = React.useState(() => {
     try { return sessionStorage.getItem('ib_admin_unlocked') === '1'; } catch (e) { return false; }
   });
+  // Live build/version for the footer (version + accurate deploy date & time).
+  const [buildInfo, setBuildInfo] = React.useState(null);
+  React.useEffect(() => {
+    fetch('/api/version').then(r => r.ok ? r.json() : null).then(d => { if (d) setBuildInfo(d); }).catch(() => {});
+  }, []);
+  const versionLabel = buildInfo
+    ? `${buildInfo.version} · updated ${fmt3.dateTime(buildInfo.deployedAt)}`
+    : APP_VERSION;
+
   const signOut = () => {
     localStorage.removeItem('ib_session');
     try { sessionStorage.removeItem('ib_admin_unlocked'); } catch (e) {}
@@ -1990,6 +1999,7 @@ function App() {
         onNew={() => setNewOpen(true)}
         me={me}
         adminUnlocked={adminUnlocked}
+        versionLabel={versionLabel}
         onSignOut={signOut}
         onSwitchMe={setMeId}
         collapsed={sidebarCollapsed}

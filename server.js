@@ -6,6 +6,12 @@ const app = express();
 app.use(express.json({ limit: '5mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Build/version info. BOOT_TIME ≈ the deploy time (the process restarts on each
+// deploy), so the footer can show an accurate "updated" date + time automatically.
+const APP_VERSION = 'v2.1';
+const BOOT_TIME = new Date().toISOString();
+app.get('/api/version', (req, res) => res.json({ version: APP_VERSION, deployedAt: BOOT_TIME }));
+
 // PostgreSQL state persistence
 const pool = process.env.DATABASE_URL ? new Pool({
   connectionString: process.env.DATABASE_URL,
