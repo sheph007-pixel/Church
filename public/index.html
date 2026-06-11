@@ -1675,6 +1675,12 @@ function App() {
   };
   // Edit an existing note — only the note's own author may edit. Marks the note
   // as edited and logs a note_edited event (with the prior text) for the paper trail.
+  // Assign up to 2 deacons to an opportunity (metadata — does not bump lastActivity).
+  const setAssignees = (cid, ids) => {
+    const next = (ids || []).slice(0, 2);
+    setCases(cs => cs.map(c => c.id !== cid ? c : { ...c, assignees: next }));
+    logEvent(cid, 'assignees_changed', { ids: next });
+  };
   const editNote = (cid, noteId, text) => {
     const c0 = cases.find(c => c.id === cid);
     const n0 = c0 && c0.notes.find(n => n.id === noteId);
@@ -1925,6 +1931,7 @@ function App() {
             onAddFile={addFile} onDeleteFile={deleteFile}
             onAddContact={addContact} onEditContact={editContact} onRemoveContact={removeContact}
             onAddCareTeam={addCareTeam} onEditCareTeam={editCareTeam} onRemoveCareTeam={removeCareTeam}
+            onSetAssignees={setAssignees}
             onShare={shareToGroupMe}
             summaryEntry={summaries[selected.id]}
             onEnsureSummary={ensureSummary}

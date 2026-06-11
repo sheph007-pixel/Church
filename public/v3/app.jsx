@@ -61,6 +61,27 @@ const StatusPill3 = ({ status }) => {
   );
 };
 
+// Assigned-deacon name badges for the Team column (stacked, up to 2).
+const AssigneeBadges = ({ ids }) => {
+  const reg = (typeof window !== 'undefined' && window.MEMBERS_BY_ID) || {};
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+      {ids.slice(0, 2).map(id => {
+        const m = reg[id] || TEAM.find(t => t.id === id) || {};
+        const first = (m.name || '').split(' ')[0] || avMember(id).initials;
+        return (
+          <span key={id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5,
+            background: 'var(--bg-soft)', border: '1px solid var(--border)', borderRadius: 99,
+            padding: '2px 9px 2px 2px', fontSize: 12, fontWeight: 600, color: 'var(--text)', maxWidth: '100%' }}>
+            <Av3 id={id} size={18} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{first}</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+};
+
 const Btn3 = ({ variant = 'secondary', icon, children, onClick, size = 'md', disabled, fullWidth, type, style }) => {
   const cls = 'btn btn-' + variant + ' btn-' + size + (fullWidth ? ' btn-full' : '');
   return (
@@ -266,8 +287,10 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
                     {latest ? latest.text : 'No notes yet'}
                   </div>
                 </div>
-                <div className="row-meta">
-                  <AvStack3 ids={caseAuthors(c)} size={20} />
+                <div className="row-meta" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+                  {(c.assignees && c.assignees.length)
+                    ? <AssigneeBadges ids={c.assignees} />
+                    : <AvStack3 ids={caseAuthors(c)} size={20} />}
                   {openTasks > 0 && (
                     <span className="task-badge">
                       <Icon name="check" size={11} stroke={2} /> {openTasks}

@@ -50,7 +50,7 @@ function NoteItem3({ n, author, me, caseId, onEditNote }) {
   );
 }
 
-function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, onUpdate, onAddTask, onToggleTask, onDeleteTask, onAddFile, onDeleteFile, onSelectCase, onAddContact, onEditContact, onRemoveContact, onAddCareTeam, onEditCareTeam, onRemoveCareTeam, onShare, summaryEntry, onEnsureSummary, onRefreshSummary }) {
+function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, onUpdate, onAddTask, onToggleTask, onDeleteTask, onAddFile, onDeleteFile, onSelectCase, onAddContact, onEditContact, onRemoveContact, onAddCareTeam, onEditCareTeam, onRemoveCareTeam, onSetAssignees, onShare, summaryEntry, onEnsureSummary, onRefreshSummary }) {
   const [noteText, setNoteText] = React.useState('');
   const [taskText, setTaskText] = React.useState('');
   const [taskDue, setTaskDue] = React.useState('');
@@ -308,8 +308,40 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
         </section>
       </div>
 
-      {/* Right meta sidebar: contacts */}
+      {/* Right meta sidebar: assigned deacons + contacts */}
       <aside className="detail-meta">
+        <div className="meta-section">
+          <div className="meta-label-row">
+            <span className="meta-label">Assigned Deacons</span>
+            <span className="meta-count">{(c.assignees || []).length}/2</span>
+          </div>
+          {(c.assignees || []).length === 0 && (
+            <div className="empty-line" style={{ fontSize: 13, color: 'var(--text-muted)', padding: '6px 0' }}>
+              No deacons assigned yet. Aim for 2 per opportunity.
+            </div>
+          )}
+          {(c.assignees || []).map(id => {
+            const m = team.find(t => t.id === id) || { name: '(unknown)' };
+            return (
+              <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0' }}>
+                <Av3 id={id} size={26} />
+                <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600 }}>{m.name}</span>
+                <button className="icon-btn" title="Unassign"
+                        onClick={() => onSetAssignees(c.id, (c.assignees || []).filter(x => x !== id))}>
+                  <Icon name="close" size={13} stroke={1.8} />
+                </button>
+              </div>
+            );
+          })}
+          {(c.assignees || []).length < 2 && (
+            <select value="" onChange={e => { if (e.target.value) onSetAssignees(c.id, [...(c.assignees || []), e.target.value]); }}
+                    style={{ marginTop: 8, width: '100%', padding: '9px 10px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: 14, background: 'var(--bg)', color: 'var(--text)' }}>
+              <option value="">+ Assign a deacon…</option>
+              {team.filter(t => !t.inactive && !(c.assignees || []).includes(t.id))
+                   .map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          )}
+        </div>
         <div className="meta-section">
           <div className="meta-label-row">
             <span className="meta-label">Contacts</span>
