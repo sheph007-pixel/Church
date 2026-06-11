@@ -466,6 +466,35 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   const byNum = {};
   cases.forEach(c => { byNum[c.caseNumber] = c; });
 
+  // Deterministic safety net so the AI never re-proposes something already in the
+  // system: drop a note suggestion if every dollar amount in it already appears
+  // anywhere in the recorded notes (catches both duplicates and mis-attributions),
+  // or if its opportunity # doesn't exist. Drop a "new opportunity" if its name
+  // matches one we already have.
+  const normAmts = (t) => (String(t).match(/\$\s?[\d,]+(?:\.\d{1,2})?/g) || [])
+    .map(a => a.replace(/[^0-9.]/g, '').replace(/\.0+$/, '').replace(/\.$/, ''));
+  const recordedAmounts = new Set(
+    cases.flatMap(c => (c.notes || []).flatMap(n => normAmts(n.text)))
+  );
+  const existingNames = cases.map(c => (c.name || '').toLowerCase().trim()).filter(Boolean);
+  const dedupe = (sugg) => {
+    const noteSuggestions = (sugg.noteSuggestions || []).filter(s => {
+      if (!byNum[s.caseNumber]) return false;                 // unknown opportunity
+      const amts = normAmts(s.text);
+      if (amts.length && amts.every(a => recordedAmounts.has(a))) return false; // already recorded
+      return true;
+    });
+    const newOpportunities = (sugg.newOpportunities || []).filter(s => {
+      const nm = (s.name || '').toLowerCase().trim();
+      if (!nm) return false;
+      if (existingNames.some(ex => ex.includes(nm) || nm.includes(ex))) return false; // already an opportunity
+      const amts = normAmts(s.firstNote || '');
+      if (amts.length && amts.every(a => recordedAmounts.has(a))) return false; // amounts already recorded elsewhere
+      return true;
+    });
+    return { noteSuggestions, newOpportunities };
+  };
+
   // Parse one file by type → [{ts,sender,text}]. Unknown/media files yield [].
   const readOne = async (file) => {
     const n = (file.name || '').toLowerCase();
@@ -521,7 +550,7 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
       const data = await resp.json().catch(() => ({}));
       if (data.aiAvailable === false) { setError('AI isn’t configured on the server, so suggestions can’t be generated. (An ANTHROPIC_API_KEY is required.)'); setPhase('error'); return; }
       if (!resp.ok) { setError(data.error || 'Analysis failed. Please try again.'); setPhase('error'); return; }
-      setResult(data.suggestions || { noteSuggestions: [], newOpportunities: [] });
+      setResult(dedupe(data.suggestions || { noteSuggestions: [], newOpportunities: [] }));
       setPhase('review');
     } catch (e) { setError(e.message || 'Could not read that file.'); setPhase('error'); }
   };

@@ -389,7 +389,7 @@ function compactOpportunities(cases) {
     recorded: (c.notes || [])
       .map(n => `(${fmt3.dateFull(n.date)}) ${n.text}`)
       .join(' • ')
-      .slice(0, 1200),
+      .slice(0, 5000),
   }));
 }
 

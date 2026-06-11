@@ -619,7 +619,7 @@ ${msgs.map(m => `[${m.ts}] ${m.sender}: ${m.text}`).join('\n')}`;
     const merged = { noteSuggestions: [], newOpportunities: [] };
     let sawAI = false;
     for (let i = 0; i < messages.length; i += CHUNK) {
-      const raw = await callLLM(buildPrompt(messages.slice(i, i + CHUNK)), 4096);
+      const raw = await callLLM(buildPrompt(messages.slice(i, i + CHUNK)), 4096, 'claude-sonnet-4-6');
       if (raw == null) continue; // no API key / failure
       sawAI = true;
       const parsed = parseJSON(raw);
