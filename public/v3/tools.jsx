@@ -457,6 +457,7 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   const [error, setError] = React.useState('');
   const [result, setResult] = React.useState({ noteSuggestions: [], newOpportunities: [] });
   const [decisions, setDecisions] = React.useState({}); // key -> 'accepted' | 'dismissed' | 'error'
+  const [routes, setRoutes] = React.useState({});       // 'n<i>' -> chosen caseNumber (override the AI's match)
   const [maxTs, setMaxTs] = React.useState(null);
   const [cutoff, setCutoff] = React.useState(null);
   const [newCount, setNewCount] = React.useState(0);
@@ -509,23 +510,38 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   };
   const recordedFor = (c) => new Set((c.notes || []).flatMap(n => normAmts(n.text)));
   const alreadyRecorded = (c, text) => { const a = normAmts(text); const r = recordedFor(c); return a.length > 0 && a.every(x => r.has(x)); };
+  // Catch a dup even when the AI routed it to the WRONG case: if some case already
+  // has all these amounts AND that case's name words appear in the text, it's logged.
+  const recordedElsewhere = (text) => {
+    const a = normAmts(text); if (!a.length) return false;
+    const tt = toks(text);
+    return cases.some(c => {
+      const r = recordedFor(c);
+      if (!a.every(x => r.has(x))) return false;
+      return [...toks(c.name)].some(t => tt.has(t));
+    });
+  };
   const dedupe = (sugg) => {
     const noteSuggestions = (sugg.noteSuggestions || []).filter(s => {
       const opp = byNum[s.caseNumber];
       if (!opp) return false;                                   // unknown opportunity
-      return !alreadyRecorded(opp, s.text);                     // skip if already on this case
+      const blob = (s.text || '') + ' ' + (s.source || '');
+      if (alreadyRecorded(opp, s.text)) return false;           // already on this case
+      if (recordedElsewhere(blob)) return false;                // already logged on another case (mis-routed dup)
+      return true;
     });
     const newOpportunities = [];
     (sugg.newOpportunities || []).forEach(s => {
       const m = matchCase(s.name);
+      const blob = (s.firstNote || '') + ' ' + (s.source || '');
       if (m) {
         // Really about an existing case → turn into a note (unless already recorded).
-        if (!alreadyRecorded(m, s.firstNote || '')) {
+        if (!alreadyRecorded(m, s.firstNote || '') && !recordedElsewhere(blob)) {
           noteSuggestions.push({ caseNumber: m.caseNumber, by: s.by, date: s.date, text: s.firstNote, source: s.source });
         }
         return;
       }
-      if ((s.name || '').trim()) newOpportunities.push(s);
+      if ((s.name || '').trim() && !recordedElsewhere(blob)) newOpportunities.push(s);
     });
     return { noteSuggestions, newOpportunities };
   };
@@ -613,7 +629,14 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
 
   const decide = (key, status) => setDecisions(d => ({ ...d, [key]: status }));
   const noteText = (s) => (s.by ? s.by + ' — ' : '') + (s.text || '');
-  const acceptNote = (i, s) => decide('n' + i, onAcceptNote(s.caseNumber, { text: noteText(s), date: s.date }) ? 'accepted' : 'error');
+  const acceptNote = (i, s) => {
+    const cn = routes['n' + i] || s.caseNumber;
+    decide('n' + i, onAcceptNote(cn, { text: noteText(s), date: s.date }) ? 'accepted' : 'error');
+  };
+  // Opportunities for the correction dropdown (active first), [{num,label}].
+  const oppOptions = cases.slice()
+    .sort((a, b) => (a.status === 'closed') - (b.status === 'closed') || a.name.localeCompare(b.name))
+    .map(c => ({ num: c.caseNumber, label: `#${c.caseNumber} · ${c.name}` }));
   const acceptOpp  = (i, s) => { onAcceptOpportunity({ name: s.name, firstNote: (s.by ? s.by + ' — ' : '') + (s.firstNote || ''), date: s.date }); decide('o' + i, 'accepted'); };
 
   const finish = () => {
@@ -734,18 +757,23 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
 
           {notes.length > 0 && <h2 className="section-h">Updates for existing opportunities</h2>}
           {notes.map((s, i) => {
-            const target = byNum[s.caseNumber];
             const key = 'n' + i; const st = decisions[key];
+            const chosen = routes[key] || s.caseNumber;
+            const target = byNum[chosen];
             return (
               <Card key={key} done={!!st} accepted={st === 'accepted'}
-                    disabled={target ? false : s.caseNumber}
+                    disabled={target ? false : chosen}
                     acceptLabel="Add note"
                     onAccept={() => acceptNote(i, s)} onDismiss={() => decide(key, 'dismissed')}>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>
-                  {target ? <>#{target.caseNumber} · {target.name}</> : <>Unmatched (#{s.caseNumber})</>}
-                  {s.date && <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> · {fmt3.dateFull(s.date)}</span>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-muted)' }}>Tie to:</span>
+                  <select value={chosen} onChange={e => setRoutes(r => ({ ...r, [key]: e.target.value }))}
+                          style={{ padding: '5px 8px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 600, background: 'var(--bg)', color: 'var(--text)', maxWidth: '100%' }}>
+                    {oppOptions.map(o => <option key={o.num} value={o.num}>{o.label}</option>)}
+                  </select>
+                  {s.date && <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>· {fmt3.dateFull(s.date)}</span>}
                 </div>
-                {s.by && <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 4 }}>{s.by} reported:</div>}
+                {s.by && <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 6 }}>{s.by} reported:</div>}
                 <div style={{ fontSize: 14, marginTop: 2 }}>{s.text}</div>
                 {s.source && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, fontStyle: 'italic' }}>“{s.source}”</div>}
               </Card>
