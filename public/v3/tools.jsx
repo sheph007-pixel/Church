@@ -510,42 +510,51 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
     }
     return score >= 0.5 ? best : null;
   };
-  const recordedFor = (c) => new Set((c.notes || []).flatMap(n => normAmts(n.text)));
-  const alreadyRecorded = (c, text) => { const a = normAmts(text); const r = recordedFor(c); return a.length > 0 && a.every(x => r.has(x)); };
-  // Catch a dup even when the AI routed it to the WRONG case: if some case already
-  // has all these amounts AND that case's name words appear in the text, it's logged.
-  const recordedElsewhere = (text) => {
-    const a = normAmts(text); if (!a.length) return false;
-    const tt = toks(text);
-    return cases.some(c => {
-      const r = recordedFor(c);
-      if (!a.every(x => r.has(x))) return false;
-      return [...toks(c.name)].some(t => tt.has(t));
-    });
+  // A true duplicate = the same words are already a note on that case (so once you
+  // Accept a message, re-uploading won't add it again). We do NOT drop on amount
+  // alone — that was over-dropping real updates.
+  const alreadyAsNote = (c, text) => {
+    const n = norm(text); if (n.length < 12) return false;
+    return (c.notes || []).some(note => { const nn = norm(note.text); return nn && (nn.includes(n) || n.includes(nn)); });
+  };
+  // Deterministic case matching by distinctive name tokens (surnames/first names,
+  // KC keywords) — a lookup, not an AI guess, so a message naming a person always
+  // lands on that person's case.
+  const GEN2 = new Set(['confidential', 'family', 'couple', 'counseling', 'medical', 'assistance', 'faith',
+    'request', 'help', 'care', 'team', 'support', 'member', 'meeting', 'update', 'new', 'kc',
+    'the', 'and', 'jr', 'sr', 'mr', 'mrs', 'ms']);
+  const caseTokenSets = cases.map(c => {
+    const t = new Set();
+    [c.name, ...(c.contacts || []).map(p => p.name)].forEach(s =>
+      (s || '').toLowerCase().split(/[^a-z]+/).forEach(w => { if (w.length >= 3 && !GEN2.has(w)) t.add(w); }));
+    return { c, t };
+  });
+  const wordsOf = (text) => new Set((String(text).toLowerCase().match(/[a-z]+/g) || []));
+  const matchTok = (tok, w) => w.has(tok) || w.has(tok + 's');   // handles plural/possessive (Brightwell→Brightwells)
+  const bestCaseMatch = (text) => {
+    const w = wordsOf(text); let best = null, score = 0;
+    for (const { c, t } of caseTokenSets) { let n = 0; t.forEach(tok => { if (matchTok(tok, w)) n++; }); if (n > score) { score = n; best = c; } }
+    return score > 0 ? best : null;
+  };
+  const MONEY_RE = /\$\s?\d/;
+  const ACTION_RE = /\b(approv\w*|request\w*|asking|cover|paid|pay|rent|bills?|help|fee|gift|card|cobra|premium|deposit|reimburse\w*|tag|repair\w*|counsel\w*|tuition|utilit\w*|insurance|grocer\w*|mortgage|tires?|septic|food|gas|attorney|legal|assist\w*)\b/i;
+  // Turn each money/update message block into a verbatim note tied (by name) to a case.
+  const buildSuggestions = (blocks) => {
+    const noteSuggestions = [];
+    for (const b of blocks) {
+      const matched = bestCaseMatch(b.text);
+      if (!(MONEY_RE.test(b.text) || (matched && ACTION_RE.test(b.text)))) continue; // skip pure chatter
+      noteSuggestions.push({ caseNumber: matched ? matched.caseNumber : '', by: b.sender, date: b.ts, text: (b.text || '').trim() });
+    }
+    return { noteSuggestions, newOpportunities: [] };
   };
   const dedupe = (sugg) => {
     const noteSuggestions = (sugg.noteSuggestions || []).filter(s => {
       const opp = byNum[s.caseNumber];
-      if (!opp) return false;                                   // unknown opportunity
-      const blob = (s.text || '') + ' ' + (s.source || '');
-      if (alreadyRecorded(opp, s.text)) return false;           // already on this case
-      if (recordedElsewhere(blob)) return false;                // already logged on another case (mis-routed dup)
-      return true;
+      if (opp && alreadyAsNote(opp, s.text)) return false;      // exact words already a note on this case
+      return true;                                              // keep matched AND unmatched (you route unmatched)
     });
-    const newOpportunities = [];
-    (sugg.newOpportunities || []).forEach(s => {
-      const m = matchCase(s.name);
-      const blob = (s.firstNote || '') + ' ' + (s.source || '');
-      if (m) {
-        // Really about an existing case → turn into a note (unless already recorded).
-        if (!alreadyRecorded(m, s.firstNote || '') && !recordedElsewhere(blob)) {
-          noteSuggestions.push({ caseNumber: m.caseNumber, by: s.by, date: s.date, text: s.firstNote, source: s.source });
-        }
-        return;
-      }
-      if ((s.name || '').trim() && !recordedElsewhere(blob)) newOpportunities.push(s);
-    });
-    return { noteSuggestions, newOpportunities };
+    return { noteSuggestions, newOpportunities: [] };
   };
 
   // Parse one file by type → [{ts,sender,text}]. Unknown/media files yield [].
@@ -619,14 +628,9 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
         setResult({ noteSuggestions: [], newOpportunities: [] });
         setPhase('review'); return;
       }
-      const resp = await fetch('/api/groupme-suggest', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: relevant, opportunities: compactOpportunities(cases) }),
-      });
-      const data = await resp.json().catch(() => ({}));
-      if (data.aiAvailable === false) { setError('AI isn’t configured on the server, so suggestions can’t be generated. (An ANTHROPIC_API_KEY is required.)'); setPhase('error'); return; }
-      if (!resp.ok) { setError(data.error || 'Analysis failed. Please try again.'); setPhase('error'); return; }
-      setResult(dedupe(data.suggestions || { noteSuggestions: [], newOpportunities: [] }));
+      // Deterministic: match each money/update message to a case by name and keep
+      // the deacon's verbatim words. No AI guessing → nothing gets missed.
+      setResult(dedupe(buildSuggestions(relevant)));
       setPhase('review');
     } catch (e) { setError(e.message || 'Could not read that file.'); setPhase('error'); }
   };
@@ -668,7 +672,7 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
           <>
             <Btn3 variant="primary" size="sm" disabled={disabled} onClick={onAccept}>{acceptLabel || 'Accept'}</Btn3>
             <button className="link-btn" onClick={onDismiss}>Dismiss</button>
-            {disabled && <span style={{ fontSize: 12, color: '#b45309' }}>No matching opportunity (#{disabled})</span>}
+            {disabled && <span style={{ fontSize: 12, color: '#b45309' }}>Pick the opportunity above first</span>}
           </>
         )}
       </div>
@@ -773,13 +777,14 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
             const target = byNum[chosen];
             return (
               <Card key={key} done={!!st} accepted={st === 'accepted'}
-                    disabled={target ? false : chosen}
+                    disabled={!target}
                     acceptLabel="Add note"
                     onAccept={() => acceptNote(i, s)} onDismiss={() => decide(key, 'dismissed')}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-muted)' }}>Tie to:</span>
                   <select value={chosen} onChange={e => setRoutes(r => ({ ...r, [key]: e.target.value }))}
                           style={{ padding: '5px 8px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 600, background: 'var(--bg)', color: 'var(--text)', maxWidth: '100%' }}>
+                    <option value="">— choose opportunity —</option>
                     {oppOptions.map(o => <option key={o.num} value={o.num}>{o.label}</option>)}
                   </select>
                   {s.date && <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>· {fmt3.dateFull(s.date)}</span>}
