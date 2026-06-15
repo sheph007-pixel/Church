@@ -593,10 +593,13 @@ app.post('/api/groupme-suggest', async (req, res) => {
 Each message line is "[timestamp] Sender: text" — the Sender is the deacon reporting it. Consecutive lines
 from the same sender are one report; read them together to find the person and the amount.
 
+Your job is to MATCH each report to the right opportunity — NOT to rewrite it. The note must be the deacon's
+OWN WORDS, copied verbatim. Do not paraphrase, summarize, shorten, interpret, or add anything.
+
 Return STRICT JSON only (no prose, no code fences) with this exact shape:
 {
-  "noteSuggestions": [ { "caseNumber": "<existing # it belongs to>", "by": "<the deacon who sent the message>", "date": "YYYY-MM-DD", "text": "<faithful, concise summary of what was reported/requested>", "source": "<short quote from the messages>" } ],
-  "newOpportunities": [ { "name": "<person/family or 'Confidential — ...'>", "by": "<the deacon who sent the message>", "date": "YYYY-MM-DD", "firstNote": "<faithful, concise opening note>", "source": "<short quote>" } ]
+  "noteSuggestions": [ { "caseNumber": "<existing # it belongs to>", "by": "<the deacon who sent the message>", "date": "YYYY-MM-DD", "text": "<the deacon's message copied VERBATIM — exact words, no changes>" } ],
+  "newOpportunities": [ { "name": "<person/family or 'Confidential — ...'>", "by": "<the deacon who sent the message>", "date": "YYYY-MM-DD", "firstNote": "<the deacon's message copied VERBATIM>" } ]
 }
 
 RULES:
@@ -611,8 +614,10 @@ RULES:
   "CW", "Crystal W") refers to THAT person's opportunity; tie the amount to the person named in the same
   report. Example: "met w Amanda J … I'm asking that we cover the $350 fee" → the $350 belongs to Amanda
   Jones, NOT to anyone else. NEVER attach an amount to an opportunity whose person isn't named in that report.
-- "by" = the Sender of the message. Always fill it in. The note's text should read faithfully, e.g.
-  "Requested $350 to cover Amanda's attorney fee; her ex is behind on child support (meeting attorney on the 22nd)."
+- "by" = the Sender of the message. Always fill it in.
+- "text"/"firstNote" = the deacon's message(s) copied VERBATIM (exact words). Include the full relevant
+  message; if the report spans several of that sender's lines, include those lines verbatim. Do NOT
+  paraphrase, summarize, or add commentary — the deacon's actual words go into the record.
 - If the person isn't clearly one of the existing opportunities, make it a newOpportunity — do NOT guess a
   random existing "#". But an update about someone who IS already an existing opportunity (e.g. the
   Brightwells) is a noteSuggestion on that opportunity, NOT a newOpportunity.
@@ -621,7 +626,7 @@ RULES:
 - Ignore everything that isn't (a) or (b): bare "Approve"/"Approved" replies, scheduling/logistics, prayer
   requests, thank-yous, volunteer coordination, general discussion, and GroupMe join/left/poll/deleted lines.
   When in doubt, leave it out.
-- Keep notes factual and concise (who/what/amount/date). One suggestion per distinct event.
+- One suggestion per distinct report. The text stays verbatim (the deacon's exact words), never rewritten.
 - Go through EVERY report below and include ALL that qualify — do not sample, summarize a subset, or stop
   early. If three reports qualify, return three. Completeness matters more than brevity.
 - If nothing qualifies, return empty arrays.

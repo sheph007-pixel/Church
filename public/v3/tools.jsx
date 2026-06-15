@@ -681,10 +681,11 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
         <div>
           <h1 className="page-title">GroupMe Sync</h1>
           <div className="page-sub">
-            Upload your GroupMe export folder. AI finds only what's missing and proposes it as additive
-            notes/opportunities — nothing is changed until you Accept, it never edits or removes anything
-            already in a case, and it skips chatter that doesn't match an opportunity. Accepted items are
-            saved by you (admin) and tagged "from GroupMe."
+            Upload your GroupMe export folder. The AI's only job is to match each money/update message to the
+            right opportunity — the note saved is the deacon's <strong>actual GroupMe words</strong>, copied
+            verbatim (not a rewrite), so nothing gets made up. Nothing changes until you Accept; it never edits
+            or removes anything already in a case; you can edit or add notes afterward. Saved by you (admin) and
+            tagged "from GroupMe."
           </div>
         </div>
       </div>
