@@ -484,29 +484,48 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
     : null;
   const isRelevant = (m) => /\$\s?\d/.test(m.text || '') || (nameRe && nameRe.test(m.text || ''));
 
-  // Deterministic safety net so the AI never re-proposes something already on
-  // THAT opportunity: drop a note suggestion if every dollar amount in it already
-  // appears in the matched opportunity's own notes, or if its opportunity # doesn't
-  // exist. (Per-opportunity so a genuinely new "$350" for Amanda isn't dropped just
-  // because "$350" exists on Patrice.) Drop a "new opportunity" that matches an
-  // existing one by name.
+  // Deterministic safety net. Per opportunity: drop a note whose amounts are all
+  // already recorded on THAT case. For a proposed "new opportunity", fuzzy-match it
+  // to existing cases — if it's really an existing person, convert it into a note on
+  // that case (so a mis-classified update isn't lost), dropping it only if already
+  // recorded; otherwise keep it as genuinely new.
   const normAmts = (t) => (String(t).match(/\$\s?[\d,]+(?:\.\d{1,2})?/g) || [])
     .map(a => a.replace(/[^0-9.]/g, '').replace(/\.0+$/, '').replace(/\.$/, ''));
-  const existingNames = cases.map(c => (c.name || '').toLowerCase().trim()).filter(Boolean);
+  const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const toks = (s) => new Set(norm(s).split(' ').filter(w => w.length >= 3 && !['the', 'and'].includes(w)));
+  const matchCase = (name) => {
+    const n = norm(name); if (!n) return null;
+    const nt = toks(name); let best = null, score = 0;
+    for (const c of cases) {
+      const cn = norm(c.name);
+      if (cn && (cn === n || cn.includes(n) || n.includes(cn))) return c;
+      const ct = toks(c.name);
+      const inter = [...nt].filter(x => ct.has(x)).length;
+      const uni = new Set([...nt, ...ct]).size;
+      const j = uni ? inter / uni : 0;
+      if (j > score) { score = j; best = c; }
+    }
+    return score >= 0.5 ? best : null;
+  };
+  const recordedFor = (c) => new Set((c.notes || []).flatMap(n => normAmts(n.text)));
+  const alreadyRecorded = (c, text) => { const a = normAmts(text); const r = recordedFor(c); return a.length > 0 && a.every(x => r.has(x)); };
   const dedupe = (sugg) => {
     const noteSuggestions = (sugg.noteSuggestions || []).filter(s => {
       const opp = byNum[s.caseNumber];
       if (!opp) return false;                                   // unknown opportunity
-      const recorded = new Set((opp.notes || []).flatMap(n => normAmts(n.text)));
-      const amts = normAmts(s.text);
-      if (amts.length && amts.every(a => recorded.has(a))) return false; // already on this opportunity
-      return true;
+      return !alreadyRecorded(opp, s.text);                     // skip if already on this case
     });
-    const newOpportunities = (sugg.newOpportunities || []).filter(s => {
-      const nm = (s.name || '').toLowerCase().trim();
-      if (!nm) return false;
-      if (existingNames.some(ex => ex.includes(nm) || nm.includes(ex))) return false; // already an opportunity
-      return true;
+    const newOpportunities = [];
+    (sugg.newOpportunities || []).forEach(s => {
+      const m = matchCase(s.name);
+      if (m) {
+        // Really about an existing case → turn into a note (unless already recorded).
+        if (!alreadyRecorded(m, s.firstNote || '')) {
+          noteSuggestions.push({ caseNumber: m.caseNumber, by: s.by, date: s.date, text: s.firstNote, source: s.source });
+        }
+        return;
+      }
+      if ((s.name || '').trim()) newOpportunities.push(s);
     });
     return { noteSuggestions, newOpportunities };
   };

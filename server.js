@@ -612,7 +612,8 @@ RULES:
 - "by" = the Sender of the message. Always fill it in. The note's text should read faithfully, e.g.
   "Requested $350 to cover Amanda's attorney fee; her ex is behind on child support (meeting attorney on the 22nd)."
 - If the person isn't clearly one of the existing opportunities, make it a newOpportunity — do NOT guess a
-  random existing "#".
+  random existing "#". But an update about someone who IS already an existing opportunity (e.g. the
+  Brightwells) is a noteSuggestion on that opportunity, NOT a newOpportunity.
 - ADDITIVE ONLY: propose what is MISSING. If the event (that person + that amount/decision) is already in
   that opportunity's "recorded notes", SKIP it. Never restate, merge, or "correct" existing notes.
 - Ignore everything that isn't (a) or (b): bare "Approve"/"Approved" replies, scheduling/logistics, prayer
