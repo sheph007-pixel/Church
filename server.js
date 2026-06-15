@@ -596,16 +596,18 @@ Return STRICT JSON only (no prose, no code fences) with this exact shape:
 
 RULES:
 - Use ONLY information explicitly in the messages. Do not invent or infer beyond them.
-- ADDITIVE ONLY: propose what is MISSING from the records. Do NOT propose anything already reflected in an
-  opportunity's "recorded notes" below — if the event (same person + amount/decision) is already recorded,
-  skip it. Never restate or "correct" existing notes.
-- noteSuggestions = a genuinely new update about a person/situation that already matches an EXISTING
-  opportunity (match by name/context) and is NOT already in its recorded notes. Use that opportunity's "#".
-- newOpportunities = a person/situation NOT represented by any existing opportunity.
-- Ignore bare "Approve"/"Approved" replies, scheduling/logistics chatter, prayer requests, general
-  discussion, and GroupMe join/left/poll/deleted system lines. When in doubt, leave it out.
-- Keep notes factual and concise (amounts, dates, what was approved/spent). One suggestion per distinct event.
-- If nothing is actionable/missing, return empty arrays.
+- ONLY two things qualify: (a) a case UPDATE (a real development about a person already being helped), or
+  (b) a FUND request/approval/disbursement (amounts approved or spent). Everything else is noise.
+- MATCH TO AN EXISTING OPPORTUNITY BY THE PERSON'S NAME. A message naming the person (first name, nickname,
+  or initial — e.g. "Amanda", "Amanda J", "CW", "Crystal W") refers to that person's opportunity. Use its "#".
+  Only treat someone as a newOpportunity if no existing opportunity plausibly matches the name.
+- ADDITIVE ONLY: propose what is MISSING. If the event (that person + that amount/decision) is already in
+  that opportunity's "recorded notes", SKIP it. Never restate, merge, or "correct" existing notes.
+- Ignore everything that isn't (a) or (b): bare "Approve"/"Approved" replies, scheduling/logistics, prayer
+  requests, thank-yous, volunteer coordination, general discussion, and GroupMe join/left/poll/deleted lines.
+  When in doubt, leave it out.
+- Keep notes factual and concise (who/what/amount/date). One suggestion per distinct event.
+- If nothing qualifies, return empty arrays.
 
 EXISTING OPPORTUNITIES:
 ${oppLines || '(none)'}

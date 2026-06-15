@@ -461,35 +461,33 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   const [cutoff, setCutoff] = React.useState(null);
   const [newCount, setNewCount] = React.useState(0);
   const [summary, setSummary] = React.useState(null);
-  const [fullScan, setFullScan] = React.useState(true); // default: scan the whole export (AI de-dupes against recorded notes)
+  const [lookbackDays, setLookbackDays] = React.useState(60); // analysis window (0 = entire export)
 
   const byNum = {};
   cases.forEach(c => { byNum[c.caseNumber] = c; });
 
-  // Deterministic safety net so the AI never re-proposes something already in the
-  // system: drop a note suggestion if every dollar amount in it already appears
-  // anywhere in the recorded notes (catches both duplicates and mis-attributions),
-  // or if its opportunity # doesn't exist. Drop a "new opportunity" if its name
-  // matches one we already have.
+  // Deterministic safety net so the AI never re-proposes something already on
+  // THAT opportunity: drop a note suggestion if every dollar amount in it already
+  // appears in the matched opportunity's own notes, or if its opportunity # doesn't
+  // exist. (Per-opportunity so a genuinely new "$350" for Amanda isn't dropped just
+  // because "$350" exists on Patrice.) Drop a "new opportunity" that matches an
+  // existing one by name.
   const normAmts = (t) => (String(t).match(/\$\s?[\d,]+(?:\.\d{1,2})?/g) || [])
     .map(a => a.replace(/[^0-9.]/g, '').replace(/\.0+$/, '').replace(/\.$/, ''));
-  const recordedAmounts = new Set(
-    cases.flatMap(c => (c.notes || []).flatMap(n => normAmts(n.text)))
-  );
   const existingNames = cases.map(c => (c.name || '').toLowerCase().trim()).filter(Boolean);
   const dedupe = (sugg) => {
     const noteSuggestions = (sugg.noteSuggestions || []).filter(s => {
-      if (!byNum[s.caseNumber]) return false;                 // unknown opportunity
+      const opp = byNum[s.caseNumber];
+      if (!opp) return false;                                   // unknown opportunity
+      const recorded = new Set((opp.notes || []).flatMap(n => normAmts(n.text)));
       const amts = normAmts(s.text);
-      if (amts.length && amts.every(a => recordedAmounts.has(a))) return false; // already recorded
+      if (amts.length && amts.every(a => recorded.has(a))) return false; // already on this opportunity
       return true;
     });
     const newOpportunities = (sugg.newOpportunities || []).filter(s => {
       const nm = (s.name || '').toLowerCase().trim();
       if (!nm) return false;
       if (existingNames.some(ex => ex.includes(nm) || nm.includes(ex))) return false; // already an opportunity
-      const amts = normAmts(s.firstNote || '');
-      if (amts.length && amts.every(a => recordedAmounts.has(a))) return false; // amounts already recorded elsewhere
       return true;
     });
     return { noteSuggestions, newOpportunities };
@@ -532,11 +530,14 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
         setError('No GroupMe messages found in that selection. Upload the export folder (or its message.json / .txt / .xlsx).');
         setPhase('error'); return;
       }
-      const cut = fullScan
-        ? '1970-01-01T00:00:00.000Z'
-        : ((sync && sync.lastSyncedTs) ? sync.lastSyncedTs : latestKnownTs(cases));
+      // Analysis window: the last N days of the chat (anchored to the export's
+      // most recent message), or everything when N = 0.
+      const maxParsedTs = parsed.reduce((mx, m) => m.ts > mx ? m.ts : mx, parsed[0].ts);
+      const cut = lookbackDays > 0
+        ? new Date(new Date(maxParsedTs).getTime() - lookbackDays * 86400000).toISOString()
+        : '1970-01-01T00:00:00.000Z';
       setCutoff(cut);
-      const fresh = parsed.filter(m => new Date(m.ts) > new Date(cut));
+      const fresh = parsed.filter(m => new Date(m.ts) >= new Date(cut));
       setNewCount(fresh.length);
       if (fresh.length === 0) {
         setResult({ noteSuggestions: [], newOpportunities: [] });
@@ -620,17 +621,21 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
             <span className="page-sub" style={{ margin: 0 }}>…or a single file (message.json, .txt, .csv, or .xlsx)</span>
           </label>
 
-          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 14, cursor: 'pointer', fontSize: 13.5 }}>
-            <input type="checkbox" checked={fullScan} onChange={e => setFullScan(e.target.checked)} style={{ marginTop: 2 }} />
-            <span>
-              <strong>Scan the entire export</strong> — check the full history for anything missing, not just
-              recent messages. Recommended for a thorough catch-up; you'll still review and Accept each item.
-            </span>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, fontSize: 14 }}>
+            <span style={{ fontWeight: 600 }}>Look back over</span>
+            <select value={lookbackDays} onChange={e => setLookbackDays(Number(e.target.value))}
+                    style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: 14, background: 'var(--bg)', color: 'var(--text)' }}>
+              <option value={30}>the last 30 days</option>
+              <option value={60}>the last 60 days</option>
+              <option value={90}>the last 90 days</option>
+              <option value={0}>the entire export</option>
+            </select>
           </label>
           <div className="page-sub" style={{ marginTop: 10 }}>
-            {fullScan
-              ? 'Every message in the export will be checked against existing records; already-recorded items are skipped by the AI, and you approve anything it proposes.'
-              : <>By default, messages already covered (through <strong>{fmt3.dateFull((sync && sync.lastSyncedTs) ? sync.lastSyncedTs : latestKnownTs(cases))}</strong>, the latest recorded activity) are treated as done and skipped — only newer ones are analyzed. This is a coverage date, not your upload date. Tick the box above to re-check everything.</>}
+            Set this <em>before</em> you choose the folder. Only the most recent window is analyzed — the AI
+            matches messages to existing opportunities by name (e.g. "Amanda J" → Amanda Jones), keeps only
+            case updates and fund approvals/disbursements, and skips general back-and-forth. Anything already
+            recorded on that opportunity is dropped, and you still review and Accept each item.
           </div>
           {phase === 'error' && (
             <div style={{ marginTop: 14, padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#b91c1c', fontSize: 13 }}>
@@ -654,8 +659,8 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
           <div className="empty-title">Nothing missing to add</div>
           <div className="empty-body">
             {newCount === 0
-              ? `No messages newer than the last sync point (${cutoff ? fmt3.dateFull(cutoff) : 'n/a'}). Tick "Scan the entire export" to re-check the full history.`
-              : `Checked ${newCount} message${newCount === 1 ? '' : 's'} — your records already cover everything in the export. Nothing missing to add.`}
+              ? `No messages in the chosen window (since ${cutoff ? fmt3.dateFull(cutoff) : 'n/a'}). Widen the look-back range and try again.`
+              : `Checked ${newCount} message${newCount === 1 ? '' : 's'} in the window — everything is already recorded on its opportunity. Nothing missing to add.`}
           </div>
           <div style={{ marginTop: 14 }}>
             <Btn3 variant="primary" onClick={finish}>Done</Btn3>
@@ -707,7 +712,7 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
           })}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border, #e5e7eb)' }}>
-            <Btn3 variant="primary" onClick={finish}>Finish & advance sync point</Btn3>
+            <Btn3 variant="primary" onClick={finish}>Done</Btn3>
             <span className="page-sub" style={{ margin: 0 }}>{decidedCount} of {total} reviewed</span>
           </div>
         </>
