@@ -457,7 +457,8 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   const [error, setError] = React.useState('');
   const [result, setResult] = React.useState({ noteSuggestions: [], newOpportunities: [] });
   const [decisions, setDecisions] = React.useState({}); // key -> 'accepted' | 'dismissed' | 'error'
-  const [routes, setRoutes] = React.useState({});       // 'n<i>' -> chosen caseNumber (override the AI's match)
+  const [routes, setRoutes] = React.useState({});       // 'n<i>' -> chosen caseNumber (override the match)
+  const [editRoute, setEditRoute] = React.useState({}); // 'n<i>' -> true when the user is changing the case
   const [maxTs, setMaxTs] = React.useState(null);
   const [cutoff, setCutoff] = React.useState(null);
   const [newCount, setNewCount] = React.useState(0);
@@ -510,12 +511,19 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
     }
     return score >= 0.5 ? best : null;
   };
-  // A true duplicate = the same words are already a note on that case (so once you
-  // Accept a message, re-uploading won't add it again). We do NOT drop on amount
-  // alone — that was over-dropping real updates.
+  // Already on this case = either the exact words are a note, OR all the dollar
+  // amounts are already in this case's notes (the records were built from this same
+  // chat, so amount-on-the-same-case reliably means "already logged"). Per-case, so a
+  // genuinely new $350 on Amanda isn't dropped because $350 exists on Patrice.
   const alreadyAsNote = (c, text) => {
-    const n = norm(text); if (n.length < 12) return false;
-    return (c.notes || []).some(note => { const nn = norm(note.text); return nn && (nn.includes(n) || n.includes(nn)); });
+    const n = norm(text);
+    if (n.length >= 12 && (c.notes || []).some(note => { const nn = norm(note.text); return nn && (nn.includes(n) || n.includes(nn)); })) return true;
+    const a = normAmts(text);
+    if (a.length) {
+      const rec = new Set((c.notes || []).flatMap(note => normAmts(note.text)));
+      if (a.every(x => rec.has(x))) return true;   // all amounts already on this case
+    }
+    return false;
   };
   // Deterministic case matching by distinctive name tokens (surnames/first names,
   // KC keywords) — a lookup, not an AI guess, so a message naming a person always
@@ -541,10 +549,15 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   // Turn each money/update message block into a verbatim note tied (by name) to a case.
   const buildSuggestions = (blocks) => {
     const noteSuggestions = [];
+    const seen = new Set();
     for (const b of blocks) {
       const matched = bestCaseMatch(b.text);
       if (!(MONEY_RE.test(b.text) || (matched && ACTION_RE.test(b.text)))) continue; // skip pure chatter
-      noteSuggestions.push({ caseNumber: matched ? matched.caseNumber : '', by: b.sender, date: b.ts, text: (b.text || '').trim() });
+      const cn = matched ? matched.caseNumber : '';
+      const k = cn + '|' + norm(b.text);
+      if (seen.has(k)) continue;                                 // identical message posted twice
+      seen.add(k);
+      noteSuggestions.push({ caseNumber: cn, by: b.sender, date: b.ts, text: (b.text || '').trim() });
     }
     return { noteSuggestions, newOpportunities: [] };
   };
@@ -781,12 +794,21 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
                     acceptLabel="Add note"
                     onAccept={() => acceptNote(i, s)} onDismiss={() => decide(key, 'dismissed')}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-muted)' }}>Tie to:</span>
-                  <select value={chosen} onChange={e => setRoutes(r => ({ ...r, [key]: e.target.value }))}
-                          style={{ padding: '5px 8px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 600, background: 'var(--bg)', color: 'var(--text)', maxWidth: '100%' }}>
-                    <option value="">— choose opportunity —</option>
-                    {oppOptions.map(o => <option key={o.num} value={o.num}>{o.label}</option>)}
-                  </select>
+                  {(target && !editRoute[key]) ? (
+                    <>
+                      <span style={{ fontWeight: 700, fontSize: 14 }}>#{target.caseNumber} · {target.name}</span>
+                      <button className="link-btn" style={{ fontSize: 12 }} onClick={() => setEditRoute(r => ({ ...r, [key]: true }))}>change</button>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-muted)' }}>Tie to:</span>
+                      <select value={chosen} onChange={e => { setRoutes(r => ({ ...r, [key]: e.target.value })); setEditRoute(r => ({ ...r, [key]: false })); }}
+                              style={{ padding: '5px 8px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 600, background: 'var(--bg)', color: 'var(--text)', maxWidth: '100%' }}>
+                        <option value="">— choose opportunity —</option>
+                        {oppOptions.map(o => <option key={o.num} value={o.num}>{o.label}</option>)}
+                      </select>
+                    </>
+                  )}
                   {s.date && <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>· {fmt3.dateFull(s.date)}</span>}
                 </div>
                 {s.by && <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 6 }}>{s.by} reported:</div>}
