@@ -466,6 +466,24 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   const byNum = {};
   cases.forEach(c => { byNum[c.caseNumber] = c; });
 
+  // Relevance pre-filter: a message matters if it mentions a dollar amount OR a
+  // known person (an opportunity/contact name). We send ONLY these to the AI so a
+  // money/name message can't be missed in the noise — the AI just matches + dedupes.
+  const GENERIC = new Set(['confidential', 'family', 'couple', 'medical', 'counseling', 'the', 'and', 'jr', 'sr']);
+  const nameTokens = (() => {
+    const set = new Set();
+    const add = (s) => (s || '').split(/[^A-Za-z]+/).forEach(w => {
+      const lw = w.toLowerCase();
+      if (w.length >= 3 && !GENERIC.has(lw)) set.add(lw);
+    });
+    cases.forEach(c => { add(c.name); (c.contacts || []).forEach(p => add(p.name)); });
+    return [...set];
+  })();
+  const nameRe = nameTokens.length
+    ? new RegExp('\\b(' + nameTokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\b', 'i')
+    : null;
+  const isRelevant = (m) => /\$\s?\d/.test(m.text || '') || (nameRe && nameRe.test(m.text || ''));
+
   // Deterministic safety net so the AI never re-proposes something already on
   // THAT opportunity: drop a note suggestion if every dollar amount in it already
   // appears in the matched opportunity's own notes, or if its opportunity # doesn't
@@ -538,15 +556,17 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
         : '1970-01-01T00:00:00.000Z';
       setCutoff(cut);
       const fresh = parsed.filter(m => new Date(m.ts) >= new Date(cut));
-      setNewCount(fresh.length);
-      if (fresh.length === 0) {
+      // Focus the AI on money/name-relevant messages so none get lost in the noise.
+      const relevant = fresh.filter(isRelevant);
+      setNewCount(relevant.length);
+      if (relevant.length === 0) {
         setResult({ noteSuggestions: [], newOpportunities: [] });
         setMaxTs(cut); setPhase('review'); return;
       }
       setMaxTs(fresh.reduce((mx, m) => new Date(m.ts) > new Date(mx) ? m.ts : mx, fresh[0].ts));
       const resp = await fetch('/api/groupme-suggest', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: fresh, opportunities: compactOpportunities(cases) }),
+        body: JSON.stringify({ messages: relevant, opportunities: compactOpportunities(cases) }),
       });
       const data = await resp.json().catch(() => ({}));
       if (data.aiAvailable === false) { setError('AI isn’t configured on the server, so suggestions can’t be generated. (An ANTHROPIC_API_KEY is required.)'); setPhase('error'); return; }

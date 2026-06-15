@@ -597,7 +597,10 @@ Return STRICT JSON only (no prose, no code fences) with this exact shape:
 RULES:
 - Use ONLY information explicitly in the messages. Do not invent or infer beyond them.
 - ONLY two things qualify: (a) a case UPDATE (a real development about a person already being helped), or
-  (b) a FUND request/approval/disbursement (amounts approved or spent). Everything else is noise.
+  (b) anything about MONEY for a person — a request/ask for help, a bill total, an approval, or a
+  disbursement. A pending request counts (e.g. "the Brightwells asked for help with June bills totaling
+  $2,876.41" → a noteSuggestion on the Brightwells). Never skip a message that ties a dollar amount to a
+  person, even if it's large or not yet approved. Everything else is noise.
 - MATCH TO AN EXISTING OPPORTUNITY BY THE PERSON'S NAME. A message naming the person (first name, nickname,
   or initial — e.g. "Amanda", "Amanda J", "CW", "Crystal W") refers to that person's opportunity. Use its "#".
   Only treat someone as a newOpportunity if no existing opportunity plausibly matches the name.
