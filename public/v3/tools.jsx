@@ -462,7 +462,9 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   const [cutoff, setCutoff] = React.useState(null);
   const [newCount, setNewCount] = React.useState(0);
   const [summary, setSummary] = React.useState(null);
-  const [lookbackDays, setLookbackDays] = React.useState(60); // analysis window (0 = entire export)
+  // Where the previous scan ended (so we only analyze new material this time).
+  const lastScanTs = sync && (sync.lastScanTs || sync.lastSyncedTs);
+  const [lookback, setLookback] = React.useState(lastScanTs ? 'last' : '60'); // 'last' | '30' | '60' | '90' | 'all'
 
   const byNum = {};
   cases.forEach(c => { byNum[c.caseNumber] = c; });
@@ -598,23 +600,25 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
         setError('No GroupMe messages found in that selection. Upload the export folder (or its message.json / .txt / .xlsx).');
         setPhase('error'); return;
       }
-      // Analysis window: the last N days of the chat (anchored to the export's
-      // most recent message), or everything when N = 0.
+      // Where to start: pick up after the last scan; otherwise use the chosen window.
+      // (maxParsedTs = the export's most recent message — next scan starts after it.)
       const maxParsedTs = parsed.reduce((mx, m) => m.ts > mx ? m.ts : mx, parsed[0].ts);
-      const cut = lookbackDays > 0
-        ? new Date(new Date(maxParsedTs).getTime() - lookbackDays * 86400000).toISOString()
-        : '1970-01-01T00:00:00.000Z';
+      setMaxTs(maxParsedTs);
+      const dayMs = 86400000;
+      let cut;
+      if (lookback === 'all') cut = '1970-01-01T00:00:00.000Z';
+      else if (lookback === 'last') cut = lastScanTs || new Date(new Date(maxParsedTs).getTime() - 90 * dayMs).toISOString();
+      else cut = new Date(new Date(maxParsedTs).getTime() - Number(lookback) * dayMs).toISOString();
       setCutoff(cut);
-      const fresh = parsed.filter(m => new Date(m.ts) >= new Date(cut));
+      const fresh = parsed.filter(m => new Date(m.ts) > new Date(cut));
       // Group each deacon's burst, then keep only money/name-relevant blocks so a
       // request can't be missed and its amount stays tied to the right person.
       const relevant = groupConsecutive(fresh).filter(isRelevant);
       setNewCount(relevant.length);
       if (relevant.length === 0) {
         setResult({ noteSuggestions: [], newOpportunities: [] });
-        setMaxTs(cut); setPhase('review'); return;
+        setPhase('review'); return;
       }
-      setMaxTs(fresh.reduce((mx, m) => new Date(m.ts) > new Date(mx) ? m.ts : mx, fresh[0].ts));
       const resp = await fetch('/api/groupme-suggest', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: relevant, opportunities: compactOpportunities(cases) }),
@@ -643,7 +647,7 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
     const added     = Object.entries(decisions).filter(([k, v]) => k[0] === 'n' && v === 'accepted').length;
     const created   = Object.entries(decisions).filter(([k, v]) => k[0] === 'o' && v === 'accepted').length;
     const dismissed = Object.values(decisions).filter(v => v === 'dismissed').length;
-    onRecordSync({ lastSyncedTs: maxTs || cutoff, added, created, dismissed });
+    onRecordSync({ lastScanTs: maxTs || cutoff, added, created, dismissed });
     setSummary({ added, created, dismissed }); setPhase('done');
   };
 
@@ -701,20 +705,26 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
           </label>
 
           <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, fontSize: 14 }}>
-            <span style={{ fontWeight: 600 }}>Look back over</span>
-            <select value={lookbackDays} onChange={e => setLookbackDays(Number(e.target.value))}
+            <span style={{ fontWeight: 600 }}>Analyze</span>
+            <select value={lookback} onChange={e => setLookback(e.target.value)}
                     style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: 14, background: 'var(--bg)', color: 'var(--text)' }}>
-              <option value={30}>the last 30 days</option>
-              <option value={60}>the last 60 days</option>
-              <option value={90}>the last 90 days</option>
-              <option value={0}>the entire export</option>
+              <option value="last">new material since the last scan</option>
+              <option value="30">the last 30 days</option>
+              <option value="60">the last 60 days</option>
+              <option value="90">the last 90 days</option>
+              <option value="all">the entire export</option>
             </select>
           </label>
           <div className="page-sub" style={{ marginTop: 10 }}>
-            Set this <em>before</em> you choose the folder. Only the most recent window is analyzed — the AI
-            matches messages to existing opportunities by name (e.g. "Amanda J" → Amanda Jones), keeps only
-            case updates and fund approvals/disbursements, and skips general back-and-forth. Anything already
-            recorded on that opportunity is dropped, and you still review and Accept each item.
+            {lastScanTs
+              ? <>Set this <em>before</em> you choose the folder. By default it picks up right after your last
+                  scan (covered through <strong>{fmt3.dateFull(lastScanTs)}</strong>), so re-uploading the same
+                  export only analyzes the new conversation since then.</>
+              : <>Set this <em>before</em> you choose the folder. After this first scan it'll remember where it
+                  ended and pick up from there next time.</>}
+            {' '}The AI matches messages to existing opportunities by name (e.g. "Amanda J" → Amanda Jones),
+            keeps only case updates and fund approvals/requests, skips back-and-forth, drops anything already
+            recorded, and you review &amp; Accept each item.
           </div>
           {phase === 'error' && (
             <div style={{ marginTop: 14, padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#b91c1c', fontSize: 13 }}>

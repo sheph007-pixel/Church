@@ -1826,8 +1826,8 @@ function App() {
     return num;
   };
   // Record a completed sync (cutoff advance + audit entry).
-  const recordSync = ({ lastSyncedTs, added, created, dismissed }) => {
-    setSync({ lastSyncedTs });
+  const recordSync = ({ lastScanTs, added, created, dismissed }) => {
+    setSync({ lastScanTs });
     logEvent(null, 'groupme_synced', { added, created, dismissed });
   };
 
