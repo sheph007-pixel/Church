@@ -536,6 +536,21 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
     return merged.sort((a, b) => new Date(a.ts) - new Date(b.ts));
   };
 
+  // Merge a deacon's consecutive messages (within 30 min) into one block, so the
+  // person's name and the dollar amount stay together for accurate matching.
+  const groupConsecutive = (msgs) => {
+    const out = [];
+    for (const m of msgs) {
+      const prev = out[out.length - 1];
+      if (prev && prev.sender === m.sender && (new Date(m.ts) - new Date(prev._last)) <= 30 * 60000) {
+        prev.text += '\n' + m.text; prev._last = m.ts;
+      } else {
+        out.push({ ts: m.ts, sender: m.sender, text: m.text, _last: m.ts });
+      }
+    }
+    return out.map(({ _last, ...b }) => b);
+  };
+
   const onPick = async (fileList) => {
     const files = Array.from(fileList || []);
     if (!files.length) return;
@@ -556,8 +571,9 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
         : '1970-01-01T00:00:00.000Z';
       setCutoff(cut);
       const fresh = parsed.filter(m => new Date(m.ts) >= new Date(cut));
-      // Focus the AI on money/name-relevant messages so none get lost in the noise.
-      const relevant = fresh.filter(isRelevant);
+      // Group each deacon's burst, then keep only money/name-relevant blocks so a
+      // request can't be missed and its amount stays tied to the right person.
+      const relevant = groupConsecutive(fresh).filter(isRelevant);
       setNewCount(relevant.length);
       if (relevant.length === 0) {
         setResult({ noteSuggestions: [], newOpportunities: [] });
@@ -577,8 +593,9 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   };
 
   const decide = (key, status) => setDecisions(d => ({ ...d, [key]: status }));
-  const acceptNote = (i, s) => decide('n' + i, onAcceptNote(s.caseNumber, { text: s.text, date: s.date }) ? 'accepted' : 'error');
-  const acceptOpp  = (i, s) => { onAcceptOpportunity({ name: s.name, firstNote: s.firstNote, date: s.date }); decide('o' + i, 'accepted'); };
+  const noteText = (s) => (s.by ? s.by + ' — ' : '') + (s.text || '');
+  const acceptNote = (i, s) => decide('n' + i, onAcceptNote(s.caseNumber, { text: noteText(s), date: s.date }) ? 'accepted' : 'error');
+  const acceptOpp  = (i, s) => { onAcceptOpportunity({ name: s.name, firstNote: (s.by ? s.by + ' — ' : '') + (s.firstNote || ''), date: s.date }); decide('o' + i, 'accepted'); };
 
   const finish = () => {
     const added     = Object.entries(decisions).filter(([k, v]) => k[0] === 'n' && v === 'accepted').length;
@@ -709,8 +726,9 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
                   {target ? <>#{target.caseNumber} · {target.name}</> : <>Unmatched (#{s.caseNumber})</>}
                   {s.date && <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> · {fmt3.dateFull(s.date)}</span>}
                 </div>
-                <div style={{ fontSize: 14, marginTop: 4 }}>{s.text}</div>
-                {s.source && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, fontStyle: 'italic' }}>source: {s.source}</div>}
+                {s.by && <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 4 }}>{s.by} reported:</div>}
+                <div style={{ fontSize: 14, marginTop: 2 }}>{s.text}</div>
+                {s.source && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, fontStyle: 'italic' }}>“{s.source}”</div>}
               </Card>
             );
           })}
