@@ -519,7 +519,7 @@ app.get('/api/patch-v5', async (req, res) => {
 });
 
 // Shared LLM call — Anthropic (preferred) → OpenAI fallback → null. Returns text or null.
-async function callLLM(prompt, maxTokens = 1024, model) {
+async function callLLM(prompt, maxTokens = 1024, model, temperature) {
   if (process.env.ANTHROPIC_API_KEY) {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -531,6 +531,7 @@ async function callLLM(prompt, maxTokens = 1024, model) {
       body: JSON.stringify({
         model: model || 'claude-haiku-4-5-20251001',
         max_tokens: maxTokens,
+        ...(temperature != null ? { temperature } : {}),
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -549,6 +550,7 @@ async function callLLM(prompt, maxTokens = 1024, model) {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         max_tokens: maxTokens,
+        ...(temperature != null ? { temperature } : {}),
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -620,6 +622,8 @@ RULES:
   requests, thank-yous, volunteer coordination, general discussion, and GroupMe join/left/poll/deleted lines.
   When in doubt, leave it out.
 - Keep notes factual and concise (who/what/amount/date). One suggestion per distinct event.
+- Go through EVERY report below and include ALL that qualify — do not sample, summarize a subset, or stop
+  early. If three reports qualify, return three. Completeness matters more than brevity.
 - If nothing qualifies, return empty arrays.
 
 EXISTING OPPORTUNITIES:
@@ -636,11 +640,11 @@ ${msgs.map(m => `[${m.ts}] ${m.sender}: ${m.text}`).join('\n')}`;
 
   try {
     // Chunk to keep each call within limits; merge results.
-    const CHUNK = 150;
+    const CHUNK = 12;
     const merged = { noteSuggestions: [], newOpportunities: [] };
     let sawAI = false;
     for (let i = 0; i < messages.length; i += CHUNK) {
-      const raw = await callLLM(buildPrompt(messages.slice(i, i + CHUNK)), 4096, 'claude-sonnet-4-6');
+      const raw = await callLLM(buildPrompt(messages.slice(i, i + CHUNK)), 4096, 'claude-sonnet-4-6', 0);
       if (raw == null) continue; // no API key / failure
       sawAI = true;
       const parsed = parseJSON(raw);
