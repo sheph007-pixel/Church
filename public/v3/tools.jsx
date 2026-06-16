@@ -649,16 +649,15 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   };
 
   const decide = (key, status) => setDecisions(d => ({ ...d, [key]: status }));
-  const noteText = (s) => (s.by ? s.by + ' — ' : '') + (s.text || '');
   const acceptNote = (i, s) => {
     const cn = routes['n' + i] || s.caseNumber;
-    decide('n' + i, onAcceptNote(cn, { text: noteText(s), date: s.date }) ? 'accepted' : 'error');
+    decide('n' + i, onAcceptNote(cn, { text: (s.text || '').trim(), date: s.date, by: s.by }) ? 'accepted' : 'error');
   };
   // Opportunities for the correction dropdown (active first), [{num,label}].
   const oppOptions = cases.slice()
     .sort((a, b) => (a.status === 'closed') - (b.status === 'closed') || a.name.localeCompare(b.name))
     .map(c => ({ num: c.caseNumber, label: `#${c.caseNumber} · ${c.name}` }));
-  const acceptOpp  = (i, s) => { onAcceptOpportunity({ name: s.name, firstNote: (s.by ? s.by + ' — ' : '') + (s.firstNote || ''), date: s.date }); decide('o' + i, 'accepted'); };
+  const acceptOpp  = (i, s) => { onAcceptOpportunity({ name: s.name, firstNote: (s.firstNote || '').trim(), date: s.date, by: s.by }); decide('o' + i, 'accepted'); };
 
   const finish = () => {
     const added     = Object.entries(decisions).filter(([k, v]) => k[0] === 'n' && v === 'accepted').length;

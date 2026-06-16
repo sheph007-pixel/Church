@@ -1791,33 +1791,41 @@ function App() {
   };
 
   // ─── GroupMe Sync: accept handlers (additive only) ───────────────────
-  // Append an imported note dated to the source message; bump lastActivity only
-  // if the imported note is newer. Existing notes are never touched.
-  const acceptNoteSuggestion = (caseNumber, { text, date }) => {
+  // The note is attributed to the DEACON who said it in GroupMe (resolved from
+  // `by`), tagged source:'groupme'. Existing notes are never touched.
+  const deaconIdByName = (name) => {
+    if (!name) return null;
+    const n = name.trim().toLowerCase();
+    const m = team.find(t => (t.name || '').trim().toLowerCase() === n);
+    return m ? m.id : null;
+  };
+  const acceptNoteSuggestion = (caseNumber, { text, date, by }) => {
     const target = cases.find(c => c.caseNumber === caseNumber);
     if (!target) return false;
     const noteDate = date ? new Date(date).toISOString() : stamp();
+    const author = deaconIdByName(by) || meId;
     setCases(cs => cs.map(c => c.caseNumber !== caseNumber ? c : {
       ...c,
-      notes: [{ id: 'n' + Date.now() + Math.random().toString(36).slice(2,6), author: meId, date: noteDate, text, source: 'groupme' }, ...c.notes],
+      notes: [{ id: 'n' + Date.now() + Math.random().toString(36).slice(2,6), author, date: noteDate, text, source: 'groupme' }, ...c.notes],
       lastActivity: new Date(noteDate) > new Date(c.lastActivity) ? noteDate : c.lastActivity,
     }));
     logEvent(target.id, 'sync_note_imported', { preview: text.slice(0, 80) });
     return true;
   };
   // Create a new opportunity from a suggestion, opened-dated to the source.
-  const acceptNewOpportunity = ({ name, firstNote, date }) => {
+  const acceptNewOpportunity = ({ name, firstNote, date, by }) => {
     const usedNums = new Set(cases.map(c => c.caseNumber));
     let num;
     do { num = String(Math.floor(Math.random() * 9000) + 1000); } while (usedNums.has(num));
     const id = 'c' + Date.now() + Math.random().toString(36).slice(2,5);
     const openedDate = date ? new Date(date).toISOString() : stamp();
+    const author = deaconIdByName(by) || meId;
     const newCase = {
       id, caseNumber: num, name: name || 'Untitled', status: 'active',
       contacts: [], careTeam: [],
       opened: openedDate, lastActivity: openedDate,
       notes: (firstNote && firstNote.trim())
-        ? [{ id: 'n0_' + id, author: meId, date: openedDate, text: firstNote.trim(), source: 'groupme' }]
+        ? [{ id: 'n0_' + id, author, date: openedDate, text: firstNote.trim(), source: 'groupme' }]
         : [],
       tasks: [], files: [],
     };

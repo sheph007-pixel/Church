@@ -35,7 +35,7 @@ if (pool) {
 // authoritative seed (preserving the activity log). Version-gated so it runs only
 // once and never fights later edits. The marker lives in its own row so the
 // client's {cases,team,events} autosave can't clobber it.
-const DATA_VERSION = 3;
+const DATA_VERSION = 4;
 async function reconcileData() {
   if (!pool) return;
   try {
@@ -59,6 +59,17 @@ async function reconcileData() {
         (state.cases || []).forEach(c => {
           if (Array.isArray(c.tasks)) c.tasks = c.tasks.filter(t => !/^t_/.test(t.id || ''));
         });
+      }
+      if (applied < 4) {
+        // Re-attribute earlier GroupMe-sync notes: they were saved under the admin
+        // with a "Deacon Name — " prefix. Attribute to the deacon and strip the prefix.
+        const byName = {};
+        TEAM.forEach(t => { byName[(t.name || '').toLowerCase()] = t.id; });
+        (state.cases || []).forEach(c => (c.notes || []).forEach(n => {
+          if (n.source !== 'groupme' || typeof n.text !== 'string') return;
+          const m = n.text.match(/^(.+?)\s+—\s+([\s\S]+)$/);
+          if (m && byName[m[1].trim().toLowerCase()]) { n.author = byName[m[1].trim().toLowerCase()]; n.text = m[2].trim(); }
+        }));
       }
 
       await pool.query(
