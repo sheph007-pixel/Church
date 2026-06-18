@@ -1133,9 +1133,17 @@
   .mobile-tabs { display: none; }
   .mobile-header {
     display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 60;
-    height: 52px; background: var(--bg); border-bottom: 1px solid var(--border);
-    align-items: center; padding: 0 14px; gap: 12px;
+    height: 56px; background: var(--bg); border-bottom: 1px solid var(--border);
+    align-items: center; padding: 0 12px; gap: 10px;
   }
+  /* Clear, tappable Back control in the mobile case header. */
+  .mh-back {
+    display: inline-flex; align-items: center; gap: 2px;
+    background: none; border: none; cursor: pointer;
+    color: var(--primary); font-family: inherit; font-size: 15.5px; font-weight: 600;
+    padding: 8px 8px 8px 2px; margin-left: -2px; min-height: 44px; flex-shrink: 0;
+  }
+  .mh-back svg { flex-shrink: 0; }
   /* Full-width "New Opportunity" bar (mobile home, replaces the old FAB). */
   .mobile-newbar {
     display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 55;
@@ -1153,7 +1161,7 @@
        to 100vh + overflow:hidden, which otherwise clips the page on mobile). */
     html, body { height: auto; overflow-y: auto; -webkit-overflow-scrolling: touch; }
     .app { display: block; height: auto; min-height: 100vh; overflow: visible; }
-    .main { height: auto; overflow: visible; padding-top: 52px; padding-bottom: 96px; }
+    .main { height: auto; overflow: visible; padding-top: 56px; padding-bottom: 96px; }
 
     /* Case list */
     .case-list { padding: 16px 16px 96px; }
@@ -1162,8 +1170,10 @@
     .list-head { flex-direction: column; gap: 12px; }
     .head-actions { width: 100%; }
     .head-actions .btn { display: none; }
-    .search { flex: 1; width: 100%; }
-    .row { grid-template-columns: 56px 1fr; gap: 12px; padding: 14px 6px; }
+    .search { flex: 1; width: 100%; height: 48px; border-radius: var(--r-lg); }
+    .row { grid-template-columns: 56px 1fr; gap: 12px; padding: 14px 6px;
+      border-top: 1px solid var(--border-strong); }
+    .row:last-child { border-bottom: 1px solid var(--border-strong); }
     .row-meta, .row-time { display: none; }
 
     /* Status tabs: three equal-width pills that fill the row (no clipping) */
@@ -1191,7 +1201,7 @@
 
     /* Tab bar: sticky just under the fixed mobile header */
     .mobile-tabs {
-      display: flex; gap: 6px; position: sticky; top: 52px; z-index: 40;
+      display: flex; gap: 6px; position: sticky; top: 56px; z-index: 40;
       background: var(--bg); border-bottom: 1px solid var(--border); padding: 8px 12px;
     }
     .mobile-tabs .mtab {
@@ -1446,8 +1456,8 @@ function LoginPage3({ team, onLogin }) {
 function MobileHeader({ selectedCase, onBack, caseCount, syncing, onSignOut }) {
   if (selectedCase) return (
     <div className="mobile-header">
-      <button className="icon-btn" style={{ marginLeft: -4 }} onClick={onBack}>
-        <Icon name="chevronLeft" size={20} stroke={2} />
+      <button className="mh-back" onClick={onBack}>
+        <Icon name="chevronLeft" size={24} stroke={2.4} /> Back
       </button>
       <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
         <div style={{ fontWeight: 600, fontSize: 16.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
