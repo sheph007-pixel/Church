@@ -1185,9 +1185,13 @@
       font-size: 14px; font-weight: 600; color: var(--text-muted);
     }
     .mobile-tabs .mtab.on { background: var(--primary); border-color: var(--primary); color: #fff; }
-    /* Show one panel at a time based on the selected tab */
-    .detail.mtab-case   .detail-meta { display: none; }
-    .detail.mtab-people .detail-body { display: none; }
+    /* Name/status (.hero) + summary (.ai-card) stay pinned; tabs swap the rest. */
+    .detail.mtab-notes  .section-tasks { display: none; }
+    .detail.mtab-notes  .detail-meta   { display: none; }
+    .detail.mtab-tasks  .section-notes { display: none; }
+    .detail.mtab-tasks  .detail-meta   { display: none; }
+    .detail.mtab-people .section-tasks { display: none; }
+    .detail.mtab-people .section-notes { display: none; }
 
     /* Desktop-only sections hidden on phone */
     .section-files, .section-history { display: none; }

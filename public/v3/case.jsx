@@ -59,7 +59,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
   const [nameDraft, setNameDraft] = React.useState(c.name);
   const [showDone, setShowDone] = React.useState(false);
   const [showHistory, setShowHistory] = React.useState(false);
-  const [mobileTab, setMobileTab] = React.useState('case'); // mobile only: 'case' | 'people'
+  const [mobileTab, setMobileTab] = React.useState('notes'); // mobile only: 'notes' | 'tasks' | 'people'
   const [shareState, setShareState] = React.useState('idle'); // idle | copied
 
   React.useEffect(() => {
@@ -71,7 +71,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
     setNameDraft(c.name);
     setShowDone(false);
     setShowHistory(false);
-    setMobileTab('case');
+    setMobileTab('notes');
     setShareState('idle');
   }, [c.id]);
 
@@ -154,14 +154,15 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
         </Btn3>
       </header>
 
-      {/* Mobile-only tabs: keep the case content first; people info one tap away. */}
+      {/* Mobile-only tabs: name/status + summary stay pinned above; these swap the
+          section beneath (Notes default). */}
       <div className="mobile-tabs">
-        <button className={'mtab' + (mobileTab === 'case' ? ' on' : '')}
-                onClick={() => setMobileTab('case')}>Case</button>
+        <button className={'mtab' + (mobileTab === 'notes' ? ' on' : '')}
+                onClick={() => setMobileTab('notes')}>Notes{c.notes.length ? ` (${c.notes.length})` : ''}</button>
+        <button className={'mtab' + (mobileTab === 'tasks' ? ' on' : '')}
+                onClick={() => setMobileTab('tasks')}>Tasks{openTasks.length ? ` (${openTasks.length})` : ''}</button>
         <button className={'mtab' + (mobileTab === 'people' ? ' on' : '')}
-                onClick={() => setMobileTab('people')}>
-          People{peopleCount > 0 ? ` (${peopleCount})` : ''}
-        </button>
+                onClick={() => setMobileTab('people')}>People{peopleCount > 0 ? ` (${peopleCount})` : ''}</button>
       </div>
 
       <div className="detail-body">
@@ -256,7 +257,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
         </section>
 
         {/* Notes */}
-        <section className="section">
+        <section className="section section-notes">
           <div className="section-head">
             <h2>Notes <span className="section-count">{c.notes.length}</span></h2>
           </div>
