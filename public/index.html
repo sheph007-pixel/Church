@@ -454,21 +454,27 @@
   .section-help { font-size: 12px; color: var(--text-muted); font-weight: 400; letter-spacing: 0; text-transform: none; }
 
   /* Tasks */
-  /* Accent card so action items visibly stand out from notes & summary. */
+  /* Clean white card with a bold accent spine + badge: stands out clearly
+     while keeping the text high-contrast and easy to read. */
   .section-tasks {
-    background: #fffaf0;
-    border: 1px solid #f0e3c8;
-    border-left: 3px solid #d99a2b;
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-left: 4px solid #e08a1e;
     border-radius: var(--r-lg);
     padding: 16px 18px 18px;
+    box-shadow: var(--shadow-sm);
   }
-  .section-tasks h2 { align-items: center; }
-  .section-tasks .section-count { color: #9a6a14; font-weight: 600; }
+  .section-tasks h2 { align-items: center; font-size: 15px; }
+  .section-tasks .section-count { color: var(--text-muted); font-weight: 600; }
   .tasks-icon {
     display: inline-flex; align-items: center; justify-content: center;
     width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
-    background: #d99a2b; color: #fff;
+    background: #e08a1e; color: #fff;
   }
+  /* Faint tint only on the add bar to draw the eye to the input. */
+  .section-tasks .task-add { background: #fff8ee; border-color: #f0e3c8; }
+  .section-tasks .task-add input.task-add-text::placeholder { color: #8a7a60; }
+  .section-tasks .task-text { font-size: 14.5px; }
   .task-list { list-style: none; margin: 0; padding: 0;
     border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden;
     background: var(--bg); }
