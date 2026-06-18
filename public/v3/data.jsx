@@ -89,18 +89,21 @@ async function genCaseSummary(c) {
   const notesText = c.notes.slice().reverse()
     .map(n => `[${fmt3.dateFull(n.date)}] ${n.text}`)
     .join('\n\n');
-  const prompt = `You are writing a brief spoken-style status update on a church benevolence record, meant to be read aloud to the care team so everyone knows where the case stands. Use ONLY the notes provided below — nothing else.
+  // DURABLE RULE: summaries never tally totals or focus on money spent — they're a
+  // quick "where does this case stand" update, not a spend tracker. See STRICT RULES.
+  const prompt = `You are writing a brief spoken-style status update on a church benevolence record, meant to be read aloud to the care team so everyone quickly understands the family's situation and where the case stands. Use ONLY the notes provided below — nothing else.
 
 STRICT RULES:
 - Base every statement strictly on the notes below. If the notes don't say it, don't write it.
 - Do not guess, infer beyond what is written, or add any outside facts, assumptions, or recommendations.
 - Do not use outside knowledge about any person, place, employer, or organization.
 - Do not mention deacons, staff, or care-team members by name, or reference who wrote the notes.
+- Do NOT add up, total, or tally money. Never state a cumulative or "total" amount given, and never frame the update around how much has been spent helping this person. A specific recent dollar amount may be mentioned only if it's genuinely part of where the case stands now — but the summary centers on the situation, not the dollars.
 
 NOTES:
 ${notesText}
 
-Write ${SUMMARY_LEN_NOTE}: where the case stands right now and what has most recently changed. Plain, clear language that someone could read aloud to a group and instantly understand. No greetings or preamble; don't begin with "This case" or "The case" — just describe the situation.`;
+Write ${SUMMARY_LEN_NOTE}: a quick update a deacon could give the others — the family's situation/background and where things stand right now, based on the notes. Lead with the situation, not money. Plain, clear language that someone could read aloud to a group and instantly understand. No greetings or preamble; don't begin with "This case" or "The case" — just describe the situation.`;
   try {
     const resp = await fetch('/api/ai/complete', {
       method: 'POST',
