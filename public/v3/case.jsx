@@ -185,13 +185,34 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
 
         {/* Tasks */}
         <section className="section section-tasks">
-          <div className="section-head">
-            <h2>
-              <span className="tasks-icon"><Icon name="check" size={13} stroke={2.4} /></span>
-              Tasks
-              <span className="section-count">{openTasks.length} open{doneTasks.length > 0 ? ` · ${doneTasks.length} completed` : ''}</span>
-            </h2>
+          <div className="section-head tasks-head">
+            <span className="tasks-label">Tasks</span>
+            <span className="section-count">{openTasks.length} open{doneTasks.length > 0 ? ` · ${doneTasks.length} completed` : ''}</span>
           </div>
+          <ul className="task-list">
+            {openTasks.map(t => (
+              <TaskRow key={t.id} task={t} onToggle={() => onToggleTask(c.id, t.id)}
+                onDelete={() => onDeleteTask(c.id, t.id)} canEdit={canEdit} />
+            ))}
+            {doneTasks.length > 0 && (
+              <li className="task-done-divider">
+                <button type="button" className="task-done-toggle"
+                        onClick={() => setShowDone(v => !v)}>
+                  <Icon name="chevronDown" size={12} stroke={2}
+                        style={{ transform: showDone ? 'none' : 'rotate(-90deg)',
+                                 transition: 'transform 150ms' }} />
+                  Completed ({doneTasks.length})
+                </button>
+              </li>
+            )}
+            {showDone && doneTasks.map(t => (
+              <TaskRow key={t.id} task={t} onToggle={() => onToggleTask(c.id, t.id)}
+                onDelete={() => onDeleteTask(c.id, t.id)} canEdit={canEdit} />
+            ))}
+            {c.tasks.length === 0 && !canEdit && (
+              <li className="empty-line">No tasks.</li>
+            )}
+          </ul>
           {canEdit && (
             <form className="task-add" onSubmit={e => { e.preventDefault(); postTask(); }}>
               <button type="button" className="task-check task-check-empty"><Icon name="plus" size={11} stroke={2.2} /></button>
@@ -218,30 +239,6 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
               )}
             </form>
           )}
-          <ul className="task-list">
-            {openTasks.map(t => (
-              <TaskRow key={t.id} task={t} onToggle={() => onToggleTask(c.id, t.id)}
-                onDelete={() => onDeleteTask(c.id, t.id)} canEdit={canEdit} />
-            ))}
-            {doneTasks.length > 0 && (
-              <li className="task-done-divider">
-                <button type="button" className="task-done-toggle"
-                        onClick={() => setShowDone(v => !v)}>
-                  <Icon name="chevronDown" size={12} stroke={2}
-                        style={{ transform: showDone ? 'none' : 'rotate(-90deg)',
-                                 transition: 'transform 150ms' }} />
-                  Completed ({doneTasks.length})
-                </button>
-              </li>
-            )}
-            {showDone && doneTasks.map(t => (
-              <TaskRow key={t.id} task={t} onToggle={() => onToggleTask(c.id, t.id)}
-                onDelete={() => onDeleteTask(c.id, t.id)} canEdit={canEdit} />
-            ))}
-            {c.tasks.length === 0 && !canEdit && (
-              <li className="empty-line">No tasks.</li>
-            )}
-          </ul>
         </section>
 
         {/* Notes */}
@@ -256,7 +253,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
                 <textarea
                   value={noteText}
                   onChange={e => setNoteText(e.target.value)}
-                  placeholder="What happened? A visit, a call, an update — just type it."
+                  placeholder="Add a note"
                   rows={2}
                   onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) postNote(); }}
                 />

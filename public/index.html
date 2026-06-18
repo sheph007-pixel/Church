@@ -454,27 +454,39 @@
   .section-help { font-size: 12px; color: var(--text-muted); font-weight: 400; letter-spacing: 0; text-transform: none; }
 
   /* Tasks */
-  /* Clean white card with a bold accent spine + badge: stands out clearly
-     while keeping the text high-contrast and easy to read. */
+  /* Single clean checklist card: a navy top accent makes it a distinct module,
+     flat rows with light dividers keep the text high-contrast and easy to scan
+     (no nested boxes). */
   .section-tasks {
     background: var(--bg);
     border: 1px solid var(--border-strong);
-    border-left: 4px solid #e08a1e;
+    border-top: 2px solid var(--primary);
     border-radius: var(--r-lg);
-    padding: 16px 18px 18px;
+    padding: 0 16px 4px;
     box-shadow: var(--shadow-sm);
   }
-  .section-tasks h2 { align-items: center; font-size: 15px; }
-  .section-tasks .section-count { color: var(--text-muted); font-weight: 600; }
-  .tasks-icon {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
-    background: #e08a1e; color: #fff;
+  .tasks-head {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 13px 0 11px; margin-bottom: 0;
+    border-bottom: 1px solid var(--border);
   }
-  /* Faint tint only on the add bar to draw the eye to the input. */
-  .section-tasks .task-add { background: #fff8ee; border-color: #f0e3c8; }
-  .section-tasks .task-add input.task-add-text::placeholder { color: #8a7a60; }
+  .tasks-label {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--primary);
+  }
+  .section-tasks .section-count { color: var(--text-muted); font-weight: 600; }
   .section-tasks .task-text { font-size: 14.5px; }
+  /* Flatten the list + add bar into rows of the same card. */
+  .section-tasks .task-list { border: none; border-radius: 0; background: none; overflow: visible; }
+  .section-tasks .task { padding: 12px 0; border-top: 1px solid var(--border); }
+  .section-tasks .task:first-of-type { border-top: none; }
+  .section-tasks .task-add {
+    border: none; border-top: 1px solid var(--border); border-radius: 0;
+    background: none; margin: 0; padding: 11px 0;
+  }
+  .section-tasks .task-add:focus-within { box-shadow: none; border-color: var(--border); }
+  .section-tasks .task-list:empty + .task-add { border-top: none; }
+  .section-tasks .task-done-divider { background: none; }
   .task-list { list-style: none; margin: 0; padding: 0;
     border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden;
     background: var(--bg); }
