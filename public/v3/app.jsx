@@ -185,7 +185,7 @@ function Sidebar3({ active, onNav, counts, onNew, me, adminUnlocked, versionLabe
 }
 
 // ─── Case list ──────────────────────────────────────────
-function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
+function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport, summaries }) {
   const [seedStatus, setSeedStatus] = React.useState('idle');
   const [sortKey, setSortKey] = React.useState('date');
   const [sortDir, setSortDir] = React.useState('desc');
@@ -271,6 +271,11 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
         <div className="rows">
           {sorted.map(c => {
             const latest = c.notes[0];
+            // Preview the system-generated summary (the quick "where it stands" read);
+            // fall back to the latest note until a summary has been generated.
+            const sum = summaries && summaries[c.id];
+            const preview = (sum && sum.text) || (latest ? latest.text : 'No notes yet');
+            const days = Math.max(0, Math.floor((Date.now() - new Date(caseLastActivity(c)).getTime()) / 86400000));
             return (
               <button key={c.id} onClick={() => onSelect(c.id)} className="row">
                 <div className="row-left">
@@ -282,7 +287,7 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
                     <StatusPill3 status={c.status} />
                   </div>
                   <div className="row-preview">
-                    {latest ? latest.text : 'No notes yet'}
+                    {preview}
                   </div>
                 </div>
                 <div className="row-meta" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
@@ -290,7 +295,14 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
                     ? <AssigneeBadges ids={c.assignees} />
                     : <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>Unassigned</span>}
                 </div>
-                <div className="row-time">{fmt3.dateShort(caseLastActivity(c))}</div>
+                <div className="row-time">
+                  <div className="row-days">
+                    {days === 0
+                      ? <strong>Today</strong>
+                      : <><strong>{days}</strong> {days === 1 ? 'day' : 'days'}</>}
+                  </div>
+                  <div className="row-date">{fmt3.dateShort(caseLastActivity(c))}</div>
+                </div>
               </button>
             );
           })}
