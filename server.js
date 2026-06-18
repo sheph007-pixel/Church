@@ -216,7 +216,7 @@ app.get('/api/patch-v2', async (req, res) => {
       state.cases.push({
         id: 'c_25006', caseNumber: '25-006',
         name: 'Confidential, counseling (Exodus KC)',
-        status: 'closed', opened: '2025-08-15',
+        status: 'completed', opened: '2025-08-15',
         lastActivity: '2025-08-15T12:00:00.000Z',
         contacts: [], careTeam: [], tasks: [],
         notes: [{ id: 'n_25006_1', author: 'tm10', date: '2025-08-15T12:00:00.000Z',

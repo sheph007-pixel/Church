@@ -3,8 +3,8 @@
 // ─── Monthly report ─────────────────────────────────────
 function ReportView3({ cases, me, onSelect, onPrint }) {
   const active = cases.filter(c => c.status === 'active');
-  const paused = cases.filter(c => c.status === 'paused');
-  const closedThisMonth = cases.filter(c => c.status === 'closed' && c.lastActivity.startsWith('2026-04'));
+  const archived = cases.filter(c => c.status === 'archived');
+  const completedThisMonth = cases.filter(c => c.status === 'completed' && c.lastActivity.startsWith('2026-04'));
   const newThisMonth = cases.filter(c => c.opened.startsWith('2026-05'));
 
   return (
@@ -27,12 +27,12 @@ function ReportView3({ cases, me, onSelect, onPrint }) {
           <div className="stat-val">{newThisMonth.length}</div>
         </div>
         <div className="stat">
-          <div className="stat-label">Paused</div>
-          <div className="stat-val">{paused.length}</div>
+          <div className="stat-label">Archived</div>
+          <div className="stat-val">{archived.length}</div>
         </div>
         <div className="stat">
-          <div className="stat-label">Closed Recently</div>
-          <div className="stat-val">{closedThisMonth.length}</div>
+          <div className="stat-label">Completed Recently</div>
+          <div className="stat-val">{completedThisMonth.length}</div>
         </div>
       </div>
 
@@ -227,7 +227,9 @@ function ActivityView3({ events, cases, team, onSelectCase }) {
           <div className="section-label">{fmt3.dateFull(d + 'T00:00:00')}</div>
           <ul className="activity-list">
             {byDate[d].map(e => {
-              const who = team.find(t => t.id === e.who) || { name: 'Admin', initials: 'AD', color: '#64748b' };
+              const who = team.find(t => t.id === e.who) || (e.who === 'system'
+                ? { name: 'System', initials: 'SY', color: '#64748b' }
+                : { name: 'Admin', initials: 'AD', color: '#64748b' });
               const kind = EVENT_KINDS[e.kind] || { label: e.kind, icon: 'note' };
               const c = e.caseId ? cases.find(c => c.id === e.caseId) : null;
               const detail = eventDetailText(e);
@@ -655,7 +657,7 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   };
   // Opportunities for the correction dropdown (active first), [{num,label}].
   const oppOptions = cases.slice()
-    .sort((a, b) => (a.status === 'closed') - (b.status === 'closed') || a.name.localeCompare(b.name))
+    .sort((a, b) => (a.status === 'completed') - (b.status === 'completed') || a.name.localeCompare(b.name))
     .map(c => ({ num: c.caseNumber, label: `#${c.caseNumber} · ${c.name}` }));
   const acceptOpp  = (i, s) => { onAcceptOpportunity({ name: s.name, firstNote: (s.firstNote || '').trim(), date: s.date, by: s.by }); decide('o' + i, 'accepted'); };
 

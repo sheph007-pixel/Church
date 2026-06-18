@@ -15,9 +15,9 @@ const ME_ID = 'tm10';
 const GROUPME_URL = 'https://app.groupme.com/chats/group/108829787';
 
 const STATUSES = {
-  active: { label: 'Active', color: '#059669' },
-  paused: { label: 'Paused', color: '#a16207' },
-  closed: { label: 'Closed', color: '#71717a' },
+  active:    { label: 'Active',    color: '#059669' },
+  archived:  { label: 'Archived',  color: '#71717a' },
+  completed: { label: 'Completed', color: '#2563eb' },
 };
 
 const CASES = [];
@@ -168,11 +168,14 @@ function maskRedactions(text, phrases) {
 }
 
 // Signature of the content a summary depends on. Changes when a note is
-// added/edited/removed, a task is added/completed, or the status changes —
-// which is what triggers an automatic regeneration so summaries stay current.
+// added/edited/removed or a task is added/completed — which is what triggers
+// an automatic regeneration so summaries stay current.
 function caseSig(c) {
   const notesPart = (c.notes || []).map(n => (n.date || '') + ':' + (n.text || '').length).join('|');
-  return [c.status, (c.notes || []).length, (c.tasks || []).length,
+  // Note: status is intentionally NOT part of the signature — the summary text
+  // doesn't reference status, and including it would make auto-archive trigger
+  // needless summary regenerations.
+  return [(c.notes || []).length, (c.tasks || []).length,
           (c.tasks || []).filter(t => t.done).length, notesPart].join('/');
 }
 
@@ -213,7 +216,7 @@ function eventDetailText(e) {
   switch (e.kind) {
     case 'case_created':     return d.name || '';
     case 'case_renamed':     return `"${d.from}" → "${d.to}"`;
-    case 'status_changed':   return `${STATUSES[d.from]?.label || d.from} → ${STATUSES[d.to]?.label || d.to}`;
+    case 'status_changed':   return `${STATUSES[d.from]?.label || d.from} → ${STATUSES[d.to]?.label || d.to}` + (d.auto ? ' · automatic' : '');
     case 'contact_added':
     case 'contact_edited':
     case 'contact_removed':

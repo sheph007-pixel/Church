@@ -1276,6 +1276,8 @@
 // is what identifies WHO you are (and gates access — must be on the team).
 const ACCESS_CODE = '4601';
 const APP_VERSION = 'v2.0 · Jun 4 2026';
+// An Active opportunity with no activity for this many days auto-moves to Archived.
+const ARCHIVE_AFTER_DAYS = 60;
 
 // Migrate legacy YY-NNN case numbers → permanent 4-digit IDs, and fix any bad dates.
 const CASE_NUM_MAP = {
@@ -1328,11 +1330,15 @@ function migrateTeam(team) {
     return next;
   });
 }
+// Legacy status names → new lifecycle. Paused became Archived (dormant), Closed
+// became Completed (done). Applied wherever case data is loaded.
+const STATUS_MAP = { paused: 'archived', closed: 'completed' };
 function migrateCases(cases) {
   if (!Array.isArray(cases)) return cases;
   return cases.map(c => {
     const mapped = CASE_NUM_MAP[c.id];
-    const fixed = mapped ? { ...c, caseNumber: mapped } : c;
+    let fixed = mapped ? { ...c, caseNumber: mapped } : c;
+    if (STATUS_MAP[fixed.status]) fixed = { ...fixed, status: STATUS_MAP[fixed.status] };
     // Fix 25-006 date if still in 2026
     if (fixed.id === 'c_25006' && fixed.lastActivity && fixed.lastActivity.startsWith('2026')) {
       const notes = (fixed.notes || []).map(n => ({ ...n, date: '2025-08-15T12:00:00.000Z' }));
@@ -1589,6 +1595,37 @@ function App() {
     });
   }, [signedIn, dbLoading, cases, ensureSummary]);
 
+  // ── Lifecycle reconcile: Active ↔ Archived by activity ───────────────
+  // Archived is defined purely by inactivity, so one pass drives both directions:
+  //   • Active with no activity for ARCHIVE_AFTER_DAYS  → Archived
+  //   • Archived that has fresh activity (new note/task, or a manual move that
+  //     bumps lastActivity)                              → Active
+  // Completed is a manual terminal state and is never touched here. We must NOT
+  // change lastActivity (that's the inactivity clock). Each flip is logged as a
+  // System status change for the audit trail.
+  React.useEffect(() => {
+    if (!signedIn || dbLoading) return;
+    const cutoff = Date.now() - ARCHIVE_AFTER_DAYS * 86400000;
+    const recent = c => new Date(caseLastActivity(c)).getTime() >= cutoff;
+    const flips = cases.filter(c =>
+      (c.status === 'active'   && !recent(c)) ||
+      (c.status === 'archived' &&  recent(c)));
+    if (!flips.length) return;
+    const flipIds = new Set(flips.map(c => c.id));
+    setCases(cs => cs.map(c => flipIds.has(c.id)
+      ? { ...c, status: recent(c) ? 'active' : 'archived' }
+      : c));
+    setEvents(es => [
+      ...flips.map(c => ({
+        id: 'e' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+        caseId: c.id, at: new Date().toISOString(), who: 'system',
+        kind: 'status_changed',
+        detail: { from: c.status, to: recent(c) ? 'active' : 'archived', auto: true },
+      })),
+      ...es,
+    ]);
+  }, [signedIn, dbLoading, cases]);
+
   // Log sign-in once per session
   React.useEffect(() => {
     if (signedIn) {
@@ -1653,8 +1690,8 @@ function App() {
   // #/deacons, #/report, #/sync, #/o/4821 — so a deacon can copy the link and
   // send someone to the exact spot. Hash-based so it works with the SPA and the
   // relative asset paths (no server routes needed).
-  const NAV_TO_SLUG = { members: 'deacons', report: 'report', activity: 'activity', sync: 'sync', active: 'active', paused: 'paused', closed: 'closed', all: 'all' };
-  const SLUG_TO_NAV = { deacons: 'members', members: 'members', report: 'report', activity: 'activity', sync: 'sync', active: 'active', paused: 'paused', closed: 'closed', all: 'all' };
+  const NAV_TO_SLUG = { members: 'deacons', report: 'report', activity: 'activity', sync: 'sync', active: 'active', archived: 'archived', completed: 'completed', all: 'all' };
+  const SLUG_TO_NAV = { deacons: 'members', members: 'members', report: 'report', activity: 'activity', sync: 'sync', active: 'active', archived: 'archived', completed: 'completed', all: 'all' };
   const casesRef = React.useRef(cases);
   React.useEffect(() => { casesRef.current = cases; }, [cases]);
 
@@ -1698,18 +1735,18 @@ function App() {
 
   // Counts per nav item
   const counts = {
-    all:    cases.length,
-    active: cases.filter(c => c.status === 'active').length,
-    paused: cases.filter(c => c.status === 'paused').length,
-    closed: cases.filter(c => c.status === 'closed').length,
+    all:       cases.length,
+    active:    cases.filter(c => c.status === 'active').length,
+    archived:  cases.filter(c => c.status === 'archived').length,
+    completed: cases.filter(c => c.status === 'completed').length,
   };
 
   let filtered = cases;
   const searching = q.trim().length > 0;
   if (!searching) {
-    if (nav === 'active') filtered = filtered.filter(c => c.status === 'active');
-    if (nav === 'paused') filtered = filtered.filter(c => c.status === 'paused');
-    if (nav === 'closed') filtered = filtered.filter(c => c.status === 'closed');
+    if (nav === 'active')    filtered = filtered.filter(c => c.status === 'active');
+    if (nav === 'archived')  filtered = filtered.filter(c => c.status === 'archived');
+    if (nav === 'completed') filtered = filtered.filter(c => c.status === 'completed');
   } else {
     const qq = q.toLowerCase();
     filtered = filtered.filter(c =>
@@ -1725,7 +1762,7 @@ function App() {
 
   const titleMap = {
     all: 'All Opportunities',
-    active: 'Active Opportunities', paused: 'Paused', closed: 'Closed',
+    active: 'Active Opportunities', archived: 'Archived', completed: 'Completed',
   };
 
   // ─── Actions ──────────────────────────────────────────
@@ -2027,7 +2064,7 @@ function App() {
                     const r2 = await fetch('/api/state');
                     const { state } = await r2.json();
                     if (state) {
-                      if (Array.isArray(state.cases)) setCases(state.cases);
+                      if (Array.isArray(state.cases)) setCases(migrateCases(state.cases));
                       if (Array.isArray(state.team)) setTeam(migrateTeam(state.team));
                       if (Array.isArray(state.events)) setEvents(state.events);
                             }
@@ -2074,7 +2111,7 @@ function App() {
         </button>
       )}
       <nav className="mobile-nav">
-        <button className={'mobile-nav-item' + (!selected && (nav === 'active' || nav === 'all' || nav === 'paused' || nav === 'closed') ? ' active' : '')}
+        <button className={'mobile-nav-item' + (!selected && (nav === 'active' || nav === 'all' || nav === 'archived' || nav === 'completed') ? ' active' : '')}
                 onClick={() => { setSelectedId(null); setNav('active'); }}>
           <Icon name="folder" size={20} stroke={1.7} />
           <span>Opportunities</span>

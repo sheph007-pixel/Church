@@ -95,9 +95,9 @@ const Btn3 = ({ variant = 'secondary', icon, children, onClick, size = 'md', dis
 // ─── Sidebar ────────────────────────────────────────────
 function Sidebar3({ active, onNav, counts, onNew, me, adminUnlocked, versionLabel, onSignOut, onSwitchMe, collapsed, onToggleCollapse }) {
   const items = [
-    { id: 'active', icon: 'folder',  label: 'Active',  count: counts.active },
-    { id: 'paused', icon: 'clock',   label: 'Paused',  count: counts.paused },
-    { id: 'closed', icon: 'check',   label: 'Closed',  count: counts.closed },
+    { id: 'active',    icon: 'folder', label: 'Active',    count: counts.active },
+    { id: 'archived',  icon: 'clock',  label: 'Archived',  count: counts.archived },
+    { id: 'completed', icon: 'check',  label: 'Completed', count: counts.completed },
   ];
   const tools = [
     { id: 'activity', icon: 'history', label: 'Activity Log' },
