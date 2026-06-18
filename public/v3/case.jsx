@@ -59,6 +59,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
   const [nameDraft, setNameDraft] = React.useState(c.name);
   const [showDone, setShowDone] = React.useState(false);
   const [showHistory, setShowHistory] = React.useState(false);
+  const [mobileTab, setMobileTab] = React.useState('case'); // mobile only: 'case' | 'people'
   const [shareState, setShareState] = React.useState('idle'); // idle | copied
 
   React.useEffect(() => {
@@ -70,6 +71,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
     setNameDraft(c.name);
     setShowDone(false);
     setShowHistory(false);
+    setMobileTab('case');
     setShareState('idle');
   }, [c.id]);
 
@@ -134,8 +136,10 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
   const openTasks = c.tasks.filter(t => !t.done);
   const doneTasks = c.tasks.filter(t => t.done);
 
+  const peopleCount = (c.assignees || []).length + (c.contacts || []).length;
+
   return (
-    <div className="detail">
+    <div className={'detail mtab-' + mobileTab}>
       <header className="detail-head">
         <button className="back-btn" onClick={onBack}>
           <Icon name="chevronLeft" size={16} stroke={1.8} /> Back
@@ -149,6 +153,16 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
           {shareState === 'copied' ? 'Copied — paste in GroupMe (⌘V)' : 'Open GroupMe'}
         </Btn3>
       </header>
+
+      {/* Mobile-only tabs: keep the case content first; people info one tap away. */}
+      <div className="mobile-tabs">
+        <button className={'mtab' + (mobileTab === 'case' ? ' on' : '')}
+                onClick={() => setMobileTab('case')}>Case</button>
+        <button className={'mtab' + (mobileTab === 'people' ? ' on' : '')}
+                onClick={() => setMobileTab('people')}>
+          People{peopleCount > 0 ? ` (${peopleCount})` : ''}
+        </button>
+      </div>
 
       <div className="detail-body">
         {/* Name + status */}
