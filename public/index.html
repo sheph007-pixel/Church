@@ -1468,10 +1468,10 @@ function App() {
   // Persisted so they survive reloads — the same summary shows on the case
   // page and the (redacted) Monthly Report.
   const [summaries, setSummaries] = React.useState(() => {
-    try { return JSON.parse(localStorage.getItem('ib_summaries_v4') || '{}'); } catch (e) { return {}; }
+    try { return JSON.parse(localStorage.getItem('ib_summaries_v5') || '{}'); } catch (e) { return {}; }
   });
   React.useEffect(() => {
-    localStorage.setItem('ib_summaries_v4', JSON.stringify(summaries));
+    localStorage.setItem('ib_summaries_v5', JSON.stringify(summaries));
   }, [summaries]);
   const summariesRef = React.useRef(summaries);
   React.useEffect(() => { summariesRef.current = summaries; }, [summaries]);
@@ -1539,6 +1539,22 @@ function App() {
     }, 1200);
     return () => clearTimeout(t);
   }, [cases, signedIn, ensureSummary]);
+
+  // One-time refresh of EVERY summary to the latest (shorter) style. Bumping the
+  // cache key (ib_summaries_v5) clears the old longer summaries; this pass then
+  // proactively regenerates a fresh, concise summary for every opportunity so the
+  // case pages and the Monthly Report are all on the new format — not just the
+  // ones someone happens to open. ensureSummary is idempotent (skips anything
+  // already up to date), so this is cheap on later loads.
+  const didRegenAll = React.useRef(false);
+  React.useEffect(() => {
+    if (!signedIn || dbLoading || didRegenAll.current || !cases.length) return;
+    didRegenAll.current = true;
+    cases.forEach((c, i) => {
+      // light stagger so we don't fire every request in the same instant
+      setTimeout(() => ensureSummary(c), i * 150);
+    });
+  }, [signedIn, dbLoading, cases, ensureSummary]);
 
   // Log sign-in once per session
   React.useEffect(() => {
