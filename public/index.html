@@ -1130,17 +1130,6 @@
     height: 52px; background: var(--bg); border-bottom: 1px solid var(--border);
     align-items: center; padding: 0 14px; gap: 12px;
   }
-  .quick-note-bar {
-    display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 55;
-    background: var(--bg); border-top: 1px solid var(--border); padding: 10px 14px;
-    gap: 10px; align-items: flex-end;
-  }
-  .quick-note-input {
-    flex: 1; resize: none; border: 1px solid var(--border); border-radius: 10px;
-    padding: 9px 12px; font-size: 15px; font-family: var(--font); outline: none;
-    min-height: 40px; max-height: 120px; background: var(--bg-card);
-  }
-  .quick-note-input:focus { border-color: var(--primary); }
   .mobile-fab {
     display: none; position: fixed; bottom: 24px; right: 22px; z-index: 50;
     width: 54px; height: 54px; border-radius: 99px; background: var(--primary); color: #fff;
@@ -1170,9 +1159,8 @@
     /* Case detail: single column with Case|People tabs (content first) */
     .detail { display: flex; flex-direction: column; height: auto; min-height: 100vh; overflow: visible; }
     .detail-head { display: none; }
-    .detail-meta { border-left: none; border-top: none; padding-bottom: 88px; }
-    /* extra bottom padding clears the fixed quick-note bar */
-    .detail-body { padding: 16px 16px 88px; overflow: visible; height: auto; }
+    .detail-meta { border-left: none; border-top: none; padding-bottom: 32px; }
+    .detail-body { padding: 16px 16px 32px; overflow: visible; height: auto; }
 
     /* Tab bar: sticky just under the fixed mobile header */
     .mobile-tabs {
@@ -1198,7 +1186,6 @@
 
     /* New mobile elements */
     .mobile-fab { display: flex; }
-    .quick-note-bar { display: flex; }
 
     /* ── Larger, more tappable mobile typography & controls ── */
     .page-title { font-size: 24px; }
@@ -1215,7 +1202,7 @@
     .task-text { font-size: 15px; }
     .section-head h2, .section-h, .paper-h { font-size: 16px; }
     /* 16px on inputs prevents iOS auto-zoom on focus and reads better */
-    input, textarea, select, .search input, .composer-body textarea, .quick-note-input,
+    input, textarea, select, .search input, .composer-body textarea,
     .pin-input { font-size: 16px; }
     /* Bigger tap targets */
     .btn { min-height: 44px; }
@@ -1484,7 +1471,6 @@ function App() {
   };
   const [q, setQ] = React.useState('');
   const [newOpen, setNewOpen] = React.useState(false);
-  const [quickNote, setQuickNote] = React.useState('');
   const [syncing, setSyncing] = React.useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(
     () => localStorage.getItem('ib_sidebar_collapsed') === '1'
@@ -2145,19 +2131,6 @@ function App() {
         onToggleCollapse={() => setSidebarCollapsed(v => !v)}
       />
       <main className="main">{main}</main>
-      {selected && (
-        <div className="quick-note-bar">
-          <textarea className="quick-note-input" rows={1} placeholder="Add a note…"
-            value={quickNote}
-            onChange={e => setQuickNote(e.target.value)}
-            onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
-          />
-          <Btn3 variant="primary" size="sm" disabled={!quickNote.trim()}
-            onClick={() => { addNote(selectedId, quickNote.trim()); setQuickNote(''); }}>
-            Save
-          </Btn3>
-        </div>
-      )}
       {!selected && (
         <button className="mobile-fab" onClick={() => setNewOpen(true)}>
           <Icon name="plus" size={24} stroke={2.2} />
