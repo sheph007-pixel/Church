@@ -184,9 +184,10 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
         <AiSummaryCard c={c} entry={summaryEntry} onEnsure={onEnsureSummary} onRefresh={onRefreshSummary} />
 
         {/* Tasks */}
-        <section className="section">
+        <section className="section section-tasks">
           <div className="section-head">
             <h2>
+              <span className="tasks-icon"><Icon name="check" size={13} stroke={2.4} /></span>
               Tasks
               <span className="section-count">{openTasks.length} open{doneTasks.length > 0 ? ` · ${doneTasks.length} completed` : ''}</span>
             </h2>
@@ -195,7 +196,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
             <form className="task-add" onSubmit={e => { e.preventDefault(); postTask(); }}>
               <button type="button" className="task-check task-check-empty"><Icon name="plus" size={11} stroke={2.2} /></button>
               <input className="task-add-text" value={taskText} onChange={e => setTaskText(e.target.value)}
-                placeholder="Add a task — e.g. 'Call landlord by Friday'" />
+                placeholder="Add a task" />
               {taskText.trim() && (
                 <>
                   <select className="task-add-owner" value={taskOwner}

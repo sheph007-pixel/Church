@@ -454,6 +454,21 @@
   .section-help { font-size: 12px; color: var(--text-muted); font-weight: 400; letter-spacing: 0; text-transform: none; }
 
   /* Tasks */
+  /* Accent card so action items visibly stand out from notes & summary. */
+  .section-tasks {
+    background: #fffaf0;
+    border: 1px solid #f0e3c8;
+    border-left: 3px solid #d99a2b;
+    border-radius: var(--r-lg);
+    padding: 16px 18px 18px;
+  }
+  .section-tasks h2 { align-items: center; }
+  .section-tasks .section-count { color: #9a6a14; font-weight: 600; }
+  .tasks-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
+    background: #d99a2b; color: #fff;
+  }
   .task-list { list-style: none; margin: 0; padding: 0;
     border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden;
     background: var(--bg); }
