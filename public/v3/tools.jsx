@@ -469,6 +469,10 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   const lastScanTs = sync && (sync.lastScanTs || sync.lastSyncedTs);
   const [lookback, setLookback] = React.useState(lastScanTs ? 'last' : '60'); // 'last' | '30' | '60' | '90' | 'all'
 
+  // Preload the (lazy) spreadsheet parser when the Sync screen opens, so an .xlsx
+  // upload is ready instantly. Non-admin screens never load it.
+  React.useEffect(() => { ensureXLSX().catch(() => {}); }, []);
+
   const byNum = {};
   cases.forEach(c => { byNum[c.caseNumber] = c; });
 
@@ -576,7 +580,7 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   const readOne = async (file) => {
     const n = (file.name || '').toLowerCase();
     try {
-      if (/\.xlsx?$/.test(n)) return parseGroupMeXlsx(await file.arrayBuffer());
+      if (/\.xlsx?$/.test(n)) { await ensureXLSX(); return parseGroupMeXlsx(await file.arrayBuffer()); }
       if (/\.json$/.test(n)) return parseGroupMeJson(await file.text());
       if (/\.(txt|csv)$/.test(n)) return parseGroupMeText(await file.text());
     } catch (e) { return []; }

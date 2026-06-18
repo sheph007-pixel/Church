@@ -185,7 +185,7 @@ function Sidebar3({ active, onNav, counts, onNew, me, adminUnlocked, versionLabe
 }
 
 // ─── Case list ──────────────────────────────────────────
-function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport, summaries }) {
+function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport, summaries, nav, onNav, counts }) {
   const [seedStatus, setSeedStatus] = React.useState('idle');
   const [sortKey, setSortKey] = React.useState('date');
   const [sortDir, setSortDir] = React.useState('desc');
@@ -225,6 +225,16 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport, summ
 
   return (
     <div className="case-list">
+      {/* Mobile-only status tabs (the phone has no sidebar nav). Scrollable. */}
+      {onNav && counts && (
+        <div className="status-tabs">
+          {[['active', 'Active'], ['archived', 'Archived'], ['completed', 'Completed']].map(([k, label]) => (
+            <button key={k} className={'stab' + (nav === k ? ' on' : '')} onClick={() => onNav(k)}>
+              {label}<span className="stab-count">{counts[k]}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div className="list-head">
         <div>
           <h1 className="page-title">{title}</h1>

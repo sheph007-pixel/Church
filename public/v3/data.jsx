@@ -357,6 +357,22 @@ function parseGroupMeJson(content) {
     .filter(x => x.ts && gmKeep(x.sender, x.text));
 }
 
+// Load SheetJS (xlsx) on demand — it's only needed on the admin Sync screen, so we
+// don't ship it to every visitor. Caches the in-flight promise so it loads once.
+let _xlsxPromise = null;
+function ensureXLSX() {
+  if (typeof XLSX !== 'undefined') return Promise.resolve();
+  if (_xlsxPromise) return _xlsxPromise;
+  _xlsxPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+    s.onload = () => resolve();
+    s.onerror = () => { _xlsxPromise = null; reject(new Error('Could not load spreadsheet support')); };
+    document.head.appendChild(s);
+  });
+  return _xlsxPromise;
+}
+
 // .xlsx export with columns: UTC Time | Sender | Text. Needs global XLSX (SheetJS).
 function parseGroupMeXlsx(arrayBuffer) {
   if (typeof XLSX === 'undefined') throw new Error('Spreadsheet support not loaded');
@@ -404,4 +420,5 @@ Object.assign(window, {
   genCaseSummary, findRedactions, maskRedactions, caseSig,
   EVENT_KINDS, eventDetailText, seedEvents,
   parseGroupMeText, parseGroupMeXlsx, parseGroupMeJson, latestKnownTs, compactOpportunities,
+  ensureXLSX,
 });

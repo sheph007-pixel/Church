@@ -35,9 +35,15 @@
     --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
+  html { -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
     font-family: var(--font); font-size: 14px; line-height: 1.5;
     -webkit-font-smoothing: antialiased; }
+  /* On touch devices, don't let :hover backgrounds "stick" after a tap. */
+  @media (hover: none) {
+    .row:hover, .nav-item:hover, .back-btn:hover, .icon-btn:hover, .stab:hover { background: transparent; }
+  }
+  .row:active { background: var(--bg-soft); }
   button { font-family: inherit; cursor: pointer; }
   input, textarea, select { font-family: inherit; color: var(--text); }
   input:focus, textarea:focus, select:focus { outline: none; }
@@ -1130,14 +1136,15 @@
     height: 52px; background: var(--bg); border-bottom: 1px solid var(--border);
     align-items: center; padding: 0 14px; gap: 12px;
   }
-  .mobile-fab {
-    display: none; position: fixed; bottom: 24px; right: 22px; z-index: 50;
-    width: 54px; height: 54px; border-radius: 99px; background: var(--primary); color: #fff;
-    align-items: center; justify-content: center;
-    box-shadow: 0 4px 16px rgba(15,36,71,0.32); border: none; cursor: pointer;
-    transition: background 120ms;
+  /* Full-width "New Opportunity" bar (mobile home, replaces the old FAB). */
+  .mobile-newbar {
+    display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 55;
+    background: var(--bg); border-top: 1px solid var(--border); padding: 10px 14px;
   }
-  .mobile-fab:active { background: var(--primary-deep); }
+  .mobile-newbtn { width: 100%; height: 46px; font-size: 15px; }
+
+  /* Mobile-only status tabs (Active/Archived/Completed) — hidden on desktop. */
+  .status-tabs { display: none; }
 
   @media (max-width: 768px) {
     .sidebar, .mobile-nav { display: none !important; }
@@ -1149,12 +1156,34 @@
     .main { height: auto; overflow: visible; padding-top: 52px; padding-bottom: 96px; }
 
     /* Case list */
-    .case-list { padding: 16px; }
+    .case-list { padding: 16px 16px 96px; }
+    /* Tabs + the fixed mobile header convey context, so drop the big page title. */
+    .case-list .page-title, .case-list .page-sub { display: none; }
     .list-head { flex-direction: column; gap: 12px; }
+    .head-actions { width: 100%; }
     .head-actions .btn { display: none; }
-    .search { flex: 1; width: auto; }
+    .search { flex: 1; width: 100%; }
     .row { grid-template-columns: 56px 1fr; gap: 12px; padding: 14px 6px; }
     .row-meta, .row-time { display: none; }
+
+    /* Status tabs: bigger, horizontally scrollable */
+    .status-tabs {
+      display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .status-tabs::-webkit-scrollbar { display: none; }
+    .stab {
+      flex: 0 0 auto; height: 40px; padding: 0 14px;
+      border: 1px solid var(--border-strong); border-radius: 99px;
+      background: var(--bg); color: var(--text-muted);
+      font-size: 14px; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .stab.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .stab-count { font-variant-numeric: tabular-nums; opacity: 0.7; }
+
+    /* Full-width New Opportunity bar */
+    .mobile-newbar { display: block; }
 
     /* Case detail: single column with Case|People tabs (content first) */
     .detail { display: flex; flex-direction: column; height: auto; min-height: 100vh; overflow: visible; }
@@ -1183,9 +1212,6 @@
 
     /* Desktop-only sections hidden on phone */
     .section-files, .section-history { display: none; }
-
-    /* New mobile elements */
-    .mobile-fab { display: flex; }
 
     /* ── Larger, more tappable mobile typography & controls ── */
     .page-title { font-size: 24px; }
@@ -1216,7 +1242,7 @@
 
   @media print {
     .sidebar, .detail-head, .detail-meta, .tool-head, .composer,
-    .mobile-header, .mobile-nav, .mobile-fab { display: none !important; }
+    .mobile-header, .mobile-nav, .mobile-newbar { display: none !important; }
     body { background: #fff; }
     /* Let content flow across pages instead of scrolling inside the app shell. */
     html, body { height: auto !important; overflow: visible !important; }
@@ -1269,11 +1295,10 @@
 <body>
 <div id="root"></div>
 
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<!-- SheetJS (xlsx) — for parsing uploaded GroupMe spreadsheet exports on the admin Sync screen -->
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<!-- SheetJS (xlsx) is loaded on demand (only on the admin GroupMe Sync screen) via ensureXLSX(). -->
 
 <script type="text/babel" src="components/icons.jsx"></script>
 <script type="text/babel" src="v3/data.jsx"></script>
@@ -2094,6 +2119,8 @@ function App() {
                 ? `${filtered.length} ${filtered.length === 1 ? 'result' : 'results'} across all opportunities`
                 : `${filtered.length} ${filtered.length === 1 ? 'opportunity' : 'opportunities'}`}
               q={q} setQ={setQ} onNew={() => setNewOpen(true)}
+              nav={nav} counts={counts}
+              onNav={(n) => { setNav(n); setSelectedId(null); setQ(''); }}
               onImport={cases.length === 0 ? async (setSeedStatus) => {
                 setSeedStatus('loading');
                 try {
@@ -2132,9 +2159,11 @@ function App() {
       />
       <main className="main">{main}</main>
       {!selected && (
-        <button className="mobile-fab" onClick={() => setNewOpen(true)}>
-          <Icon name="plus" size={24} stroke={2.2} />
-        </button>
+        <div className="mobile-newbar">
+          <button className="btn btn-primary mobile-newbtn" onClick={() => setNewOpen(true)}>
+            <Icon name="plus" size={16} stroke={2.2} /> New Opportunity
+          </button>
+        </div>
       )}
       <nav className="mobile-nav">
         <button className={'mobile-nav-item' + (!selected && (nav === 'active' || nav === 'all' || nav === 'archived' || nav === 'completed') ? ' active' : '')}
