@@ -169,11 +169,8 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
             <select className="status-select" disabled={!canEdit}
               value={c.status}
               onChange={e => onUpdate(c.id, { status: e.target.value })}>
-              {/* Archived is system-managed (60-day inactivity); deacons pick only
-                  Active or Completed. Show Archived only when that's the current
-                  state so the control reflects reality. */}
-              {(c.status === 'archived' ? ['archived', 'active', 'completed'] : ['active', 'completed']).map(k => (
-                <option key={k} value={k}>{STATUSES[k].label}{k === 'archived' ? ' (automatic)' : ''}</option>
+              {Object.entries(STATUSES).map(([k, s]) => (
+                <option key={k} value={k}>{s.label}</option>
               ))}
             </select>
             <span className="dot-sep">·</span>

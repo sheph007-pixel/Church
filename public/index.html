@@ -1595,35 +1595,54 @@ function App() {
     });
   }, [signedIn, dbLoading, cases, ensureSummary]);
 
-  // ── Lifecycle reconcile: Active ↔ Archived by activity ───────────────
-  // Archived is defined purely by inactivity, so one pass drives both directions:
-  //   • Active with no activity for ARCHIVE_AFTER_DAYS  → Archived
-  //   • Archived that has fresh activity (new note/task, or a manual move that
-  //     bumps lastActivity)                              → Active
-  // Completed is a manual terminal state and is never touched here. We must NOT
-  // change lastActivity (that's the inactivity clock). Each flip is logged as a
-  // System status change for the audit trail.
+  // ── Lifecycle reconcile (keyed on archivedAt) ───────────────────────
+  // All three statuses are manually selectable; this pass only automates the
+  // inactivity lifecycle:
+  //   • Auto-archive:    Active with no activity for ARCHIVE_AFTER_DAYS  → Archived
+  //                      (stamp archivedAt = now)
+  //   • Auto-reactivate: Archived whose latest activity is AFTER archivedAt
+  //                      (i.e. genuinely new since it was archived)       → Active
+  //   • Backfill:        Archived with no archivedAt (legacy / migrated Paused)
+  //                      → set archivedAt = its last activity (stays archived)
+  // Comparing against archivedAt is what lets a MANUAL archive stick: its own
+  // lastActivity bump equals archivedAt, so it doesn't count as "after". Completed
+  // is never touched. Each real flip is logged as a System status change.
   React.useEffect(() => {
     if (!signedIn || dbLoading) return;
     const cutoff = Date.now() - ARCHIVE_AFTER_DAYS * 86400000;
-    const recent = c => new Date(caseLastActivity(c)).getTime() >= cutoff;
-    const flips = cases.filter(c =>
-      (c.status === 'active'   && !recent(c)) ||
-      (c.status === 'archived' &&  recent(c)));
-    if (!flips.length) return;
-    const flipIds = new Set(flips.map(c => c.id));
-    setCases(cs => cs.map(c => flipIds.has(c.id)
-      ? { ...c, status: recent(c) ? 'active' : 'archived' }
-      : c));
-    setEvents(es => [
-      ...flips.map(c => ({
-        id: 'e' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-        caseId: c.id, at: new Date().toISOString(), who: 'system',
-        kind: 'status_changed',
-        detail: { from: c.status, to: recent(c) ? 'active' : 'archived', auto: true },
-      })),
-      ...es,
-    ]);
+    const lastMs = c => new Date(caseLastActivity(c)).getTime();
+    const toArchive = [], toReactivate = [], toBackfill = [];
+    cases.forEach(c => {
+      if (c.status === 'active') {
+        if (lastMs(c) < cutoff) toArchive.push(c);
+      } else if (c.status === 'archived') {
+        if (!c.archivedAt) toBackfill.push(c);
+        else if (lastMs(c) > new Date(c.archivedAt).getTime()) toReactivate.push(c);
+      }
+    });
+    if (!toArchive.length && !toReactivate.length && !toBackfill.length) return;
+    const nowIso = new Date().toISOString();
+    const archiveIds = new Set(toArchive.map(c => c.id));
+    const reactIds = new Set(toReactivate.map(c => c.id));
+    const backfillIds = new Set(toBackfill.map(c => c.id));
+    setCases(cs => cs.map(c => {
+      if (archiveIds.has(c.id))  return { ...c, status: 'archived', archivedAt: nowIso };
+      if (reactIds.has(c.id))    return { ...c, status: 'active', archivedAt: null };
+      if (backfillIds.has(c.id)) return { ...c, archivedAt: caseLastActivity(c) };
+      return c;
+    }));
+    const sysFlip = (c, to) => ({
+      id: 'e' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+      caseId: c.id, at: nowIso, who: 'system', kind: 'status_changed',
+      detail: { from: c.status, to, auto: true },
+    });
+    if (toArchive.length || toReactivate.length) {
+      setEvents(es => [
+        ...toArchive.map(c => sysFlip(c, 'archived')),
+        ...toReactivate.map(c => sysFlip(c, 'active')),
+        ...es,
+      ]);
+    }
   }, [signedIn, dbLoading, cases]);
 
   // Log sign-in once per session
@@ -1799,7 +1818,16 @@ function App() {
   };
   const updateCase = (cid, patch) => {
     const prev = cases.find(c => c.id === cid);
-    setCases(cs => cs.map(c => c.id !== cid ? c : { ...c, ...patch, lastActivity: stamp() }));
+    const t = stamp();
+    setCases(cs => cs.map(c => {
+      if (c.id !== cid) return c;
+      const next = { ...c, ...patch, lastActivity: t };
+      // Stamp when a case is archived so auto-reactivate only fires on activity AFTER
+      // this point (lets a manual Archive stick). Clear it when leaving Archived.
+      if (patch.status === 'archived') next.archivedAt = t;
+      else if (patch.status === 'active' || patch.status === 'completed') next.archivedAt = null;
+      return next;
+    }));
     if (!prev) return;
     // Compute and log diff
     if (patch.name !== undefined && patch.name !== prev.name) {
