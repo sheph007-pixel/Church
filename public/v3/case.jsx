@@ -50,7 +50,7 @@ function NoteItem3({ n, author, me, caseId, onEditNote }) {
   );
 }
 
-function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, onUpdate, onAddTask, onToggleTask, onDeleteTask, onAddFile, onDeleteFile, onSelectCase, onAddContact, onEditContact, onRemoveContact, onAddCareTeam, onEditCareTeam, onRemoveCareTeam, onSetAssignees, onShare, summaryEntry, onEnsureSummary, onRefreshSummary }) {
+function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, onUpdate, onAddTask, onToggleTask, onDeleteTask, onSelectCase, onAddContact, onEditContact, onRemoveContact, onAddCareTeam, onEditCareTeam, onRemoveCareTeam, onSetAssignees, onShare, summaryEntry, onEnsureSummary, onRefreshSummary }) {
   const [noteText, setNoteText] = React.useState('');
   const [taskText, setTaskText] = React.useState('');
   const [taskDue, setTaskDue] = React.useState('');
@@ -58,6 +58,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
   const [editingName, setEditingName] = React.useState(false);
   const [nameDraft, setNameDraft] = React.useState(c.name);
   const [showDone, setShowDone] = React.useState(false);
+  const [showHistory, setShowHistory] = React.useState(false);
   const [shareState, setShareState] = React.useState('idle'); // idle | copied
 
   React.useEffect(() => {
@@ -68,6 +69,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
     setEditingName(false);
     setNameDraft(c.name);
     setShowDone(false);
+    setShowHistory(false);
     setShareState('idle');
   }, [c.id]);
 
@@ -273,49 +275,23 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
           </div>
         </section>
 
-        {/* Files */}
-        <section className="section section-files">
-          <div className="section-head">
-            <h2>Files <span className="section-count">{c.files.length}</span></h2>
-          </div>
-          {canEdit && (
-            <label className="file-drop">
-              <input type="file" onChange={e => {
-                const f = e.target.files[0];
-                if (f) onAddFile(c.id, { name: f.name, size: (f.size/1024 < 1024 ? Math.round(f.size/1024) + ' KB' : (f.size/1024/1024).toFixed(1) + ' MB') });
-                e.target.value = '';
-              }} hidden />
-              <Icon name="upload" size={16} stroke={1.7} />
-              <span>Drop a File or <strong>Browse</strong></span>
-            </label>
-          )}
-          <ul className="files-list">
-            {c.files.length === 0 && !canEdit && <li className="empty-line">No files.</li>}
-            {c.files.map(f => (
-              <li key={f.id} className="file">
-                <Icon name={f.name.match(/\.(jpg|png|jpeg|heic)$/i) ? 'image' : 'file'} size={15} stroke={1.7} />
-                <span className="file-name">{f.name}</span>
-                <span className="file-size">{f.size}</span>
-                {canEdit && (
-                  <button className="icon-btn" onClick={() => onDeleteFile(c.id, f.id)} title="Remove">
-                    <Icon name="close" size={13} stroke={1.8} />
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* History — audit log for this case */}
+        {/* History — audit log for this case (collapsed by default) */}
         <section className="section section-history">
           <div className="section-head">
-            <h2>
-              History
-              <span className="section-count">{caseEvents.length} {caseEvents.length === 1 ? 'event' : 'events'}</span>
-              <span className="section-help"> · every change, who made it, when</span>
-            </h2>
+            <button type="button" className="history-toggle"
+                    onClick={() => setShowHistory(v => !v)}
+                    aria-expanded={showHistory}>
+              <Icon name="chevronDown" size={13} stroke={2.2}
+                    style={{ transform: showHistory ? 'none' : 'rotate(-90deg)',
+                             transition: 'transform 150ms' }} />
+              <h2 style={{ display: 'inline-flex' }}>
+                History
+                <span className="section-count">{caseEvents.length} {caseEvents.length === 1 ? 'event' : 'events'}</span>
+                <span className="section-help"> · every change, who made it, when</span>
+              </h2>
+            </button>
           </div>
-          <CaseHistoryList events={caseEvents} team={team} />
+          {showHistory && <CaseHistoryList events={caseEvents} team={team} />}
         </section>
       </div>
 

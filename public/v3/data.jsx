@@ -82,25 +82,25 @@ function caseAuthors(c) {
 // so they stay STATIC until a note/task changes or someone hits refresh.
 // These helpers do no caching — the app owns the cache + persistence.
 
-const SUMMARY_LEN_NOTE = 'three sentences, roughly 45-60 words total';
+const SUMMARY_LEN_NOTE = 'one or two sentences, roughly 25-40 words total';
 
 async function genCaseSummary(c) {
   if (c.notes.length === 0) return null;
   const notesText = c.notes.slice().reverse()
     .map(n => `[${fmt3.dateFull(n.date)}] ${n.text}`)
     .join('\n\n');
-  const prompt = `You are writing a short status summary of a church benevolence record for the care team. Use ONLY the notes provided below — nothing else.
+  const prompt = `You are writing a brief spoken-style status update on a church benevolence record, meant to be read aloud to the care team so everyone knows where the case stands. Use ONLY the notes provided below — nothing else.
 
 STRICT RULES:
 - Base every statement strictly on the notes below. If the notes don't say it, don't write it.
-- Do not guess, infer beyond what is written, or add any outside facts or assumptions.
+- Do not guess, infer beyond what is written, or add any outside facts, assumptions, or recommendations.
 - Do not use outside knowledge about any person, place, employer, or organization.
 - Do not mention deacons, staff, or care-team members by name, or reference who wrote the notes.
 
 NOTES:
 ${notesText}
 
-Write a clean, plain-language summary of EXACTLY three sentences: (1) the person/family's situation, (2) the most recent development, (3) the current next step or open question. Roughly ${SUMMARY_LEN_NOTE}. No greetings or preamble; don't begin with "This case" or "The case" — just describe the situation.`;
+Write ${SUMMARY_LEN_NOTE}: where the case stands right now and what has most recently changed. Plain, clear language that someone could read aloud to a group and instantly understand. No greetings or preamble; don't begin with "This case" or "The case" — just describe the situation.`;
   try {
     const resp = await fetch('/api/ai/complete', {
       method: 'POST',

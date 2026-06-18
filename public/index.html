@@ -437,6 +437,14 @@
   /* ─── Sections (tasks, notes, files) ────────────────── */
   .section { margin-bottom: 32px; }
   .section-head { margin-bottom: 12px; }
+  .history-toggle {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: none; border: none; padding: 2px 0; margin: 0;
+    cursor: pointer; color: var(--text); font-family: inherit; text-align: left;
+  }
+  .history-toggle svg { color: var(--text-faint); flex-shrink: 0; }
+  .history-toggle:hover svg { color: var(--text); }
+  .history-toggle h2 { cursor: pointer; }
   .section h2 {
     font-size: 14px; font-weight: 600; color: var(--text);
     margin: 0; letter-spacing: -0.1px;
@@ -1750,21 +1758,6 @@ function App() {
     }));
     if (t) logEvent(cid, 'task_deleted', { text: t.text });
   };
-  const addFile = (cid, file) => {
-    setCases(cs => cs.map(c => c.id !== cid ? c : {
-      ...c, files: [...c.files, { id: 'f' + Date.now(), ...file }],
-      lastActivity: stamp(),
-    }));
-    logEvent(cid, 'file_uploaded', { name: file.name, size: file.size });
-  };
-  const deleteFile = (cid, fid) => {
-    const c = cases.find(c => c.id === cid);
-    const f = c && c.files.find(f => f.id === fid);
-    setCases(cs => cs.map(c => c.id !== cid ? c : {
-      ...c, files: c.files.filter(f => f.id !== fid), lastActivity: stamp(),
-    }));
-    if (f) logEvent(cid, 'file_deleted', { name: f.name });
-  };
   const createCase = ({ name, firstNote, contact }) => {
     const usedNums = new Set(cases.map(c => c.caseNumber));
     let num;
@@ -1945,7 +1938,6 @@ function App() {
     main = <CaseDetail3 c={selected} me={me} caseEvents={caseEvents} team={team} onBack={() => setSelectedId(null)}
             onAddNote={addNote} onEditNote={editNote} onUpdate={updateCase}
             onAddTask={addTask} onToggleTask={toggleTask} onDeleteTask={deleteTask}
-            onAddFile={addFile} onDeleteFile={deleteFile}
             onAddContact={addContact} onEditContact={editContact} onRemoveContact={removeContact}
             onAddCareTeam={addCareTeam} onEditCareTeam={editCareTeam} onRemoveCareTeam={removeCareTeam}
             onSetAssignees={setAssignees}
