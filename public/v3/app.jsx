@@ -61,20 +61,19 @@ const StatusPill3 = ({ status }) => {
   );
 };
 
-// Assigned-deacon name badges for the Team column (stacked, up to 2).
+// Assigned-deacon avatars + names for the Team column (stacked, up to 2).
 const AssigneeBadges = ({ ids }) => {
   const reg = (typeof window !== 'undefined' && window.MEMBERS_BY_ID) || {};
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
       {ids.slice(0, 2).map(id => {
         const m = reg[id] || TEAM.find(t => t.id === id) || {};
         const first = (m.name || '').split(' ')[0] || avMember(id).initials;
         return (
-          <span key={id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5,
-            background: 'var(--bg-soft)', border: '1px solid var(--border)', borderRadius: 99,
-            padding: '2px 9px 2px 2px', fontSize: 12, fontWeight: 600, color: 'var(--text)', maxWidth: '100%' }}>
-            <Av3 id={id} size={18} />
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{first}</span>
+          <span key={id} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, maxWidth: '100%' }}>
+            <Av3 id={id} size={28} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{first}</span>
           </span>
         );
       })}
@@ -272,7 +271,6 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
         <div className="rows">
           {sorted.map(c => {
             const latest = c.notes[0];
-            const openTasks = c.tasks.filter(t => !t.done).length;
             return (
               <button key={c.id} onClick={() => onSelect(c.id)} className="row">
                 <div className="row-left">
@@ -291,11 +289,6 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport }) {
                   {(c.assignees && c.assignees.length)
                     ? <AssigneeBadges ids={c.assignees} />
                     : <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>Unassigned</span>}
-                  {openTasks > 0 && (
-                    <span className="task-badge">
-                      <Icon name="check" size={11} stroke={2} /> {openTasks}
-                    </span>
-                  )}
                 </div>
                 <div className="row-time">{fmt3.dateShort(caseLastActivity(c))}</div>
               </button>
