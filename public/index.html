@@ -1971,31 +1971,12 @@ function App() {
     logEvent(target.id, 'sync_note_imported', { preview: text.slice(0, 80) });
     return true;
   };
-  // Create a new opportunity from a suggestion, opened-dated to the source.
-  const acceptNewOpportunity = ({ name, firstNote, date, by }) => {
-    const usedNums = new Set(cases.map(c => c.caseNumber));
-    let num;
-    do { num = String(Math.floor(Math.random() * 9000) + 1000); } while (usedNums.has(num));
-    const id = 'c' + Date.now() + Math.random().toString(36).slice(2,5);
-    const openedDate = date ? new Date(date).toISOString() : stamp();
-    const author = deaconIdByName(by) || meId;
-    const newCase = {
-      id, caseNumber: num, name: name || 'Untitled', status: 'active',
-      contacts: [], careTeam: [],
-      opened: openedDate, lastActivity: openedDate,
-      notes: (firstNote && firstNote.trim())
-        ? [{ id: 'n0_' + id, author, date: openedDate, text: firstNote.trim(), source: 'groupme' }]
-        : [],
-      tasks: [], files: [],
-    };
-    setCases(cs => [newCase, ...cs]);
-    logEvent(id, 'sync_opportunity_created', { name: newCase.name });
-    return num;
-  };
-  // Record a completed sync (cutoff advance + audit entry).
-  const recordSync = ({ lastScanTs, added, created, dismissed }) => {
+  // Record a completed sync (cutoff advance + audit entry). GroupMe Sync never
+  // creates opportunities on its own — a message that doesn't match an existing
+  // one by name is surfaced for a deacon to create the case manually elsewhere.
+  const recordSync = ({ lastScanTs, added, dismissed }) => {
     setSync({ lastScanTs });
-    logEvent(null, 'groupme_synced', { added, created, dismissed });
+    logEvent(null, 'groupme_synced', { added, dismissed });
   };
 
   // ─── Contacts (people we're helping) ─────────────────
@@ -2126,7 +2107,6 @@ function App() {
   } else if (nav === 'sync') {
     main = <SyncView3 me={me} cases={cases} sync={sync}
               onAcceptNote={acceptNoteSuggestion}
-              onAcceptOpportunity={acceptNewOpportunity}
               onRecordSync={recordSync} />;
   } else {
     main = <CaseList3 cases={filtered} onSelect={setSelectedId} summaries={summaries}

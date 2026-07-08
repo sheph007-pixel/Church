@@ -451,13 +451,14 @@ function AddDeaconModal({ onClose, onAdd }) {
 
 // ─── GroupMe Sync (admin only) ──────────────────────────
 // Upload a GroupMe export; AI proposes additive suggestions (new notes on
-// existing opportunities + brand-new opportunities). Nothing is written until
-// the leader clicks Accept. Re-uploads are deduped by a moving timestamp cutoff.
-function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecordSync }) {
+// existing opportunities only — it never invents a new opportunity). Nothing
+// is written until the leader clicks Accept. Re-uploads are deduped by a
+// moving timestamp cutoff.
+function SyncView3({ me, cases, sync, onAcceptNote, onRecordSync }) {
   const [phase, setPhase] = React.useState('idle'); // idle | analyzing | review | error | done
   const [fileName, setFileName] = React.useState('');
   const [error, setError] = React.useState('');
-  const [result, setResult] = React.useState({ noteSuggestions: [], newOpportunities: [] });
+  const [result, setResult] = React.useState({ noteSuggestions: [], unmatched: [] });
   const [decisions, setDecisions] = React.useState({}); // key -> 'accepted' | 'dismissed' | 'error'
   const [routes, setRoutes] = React.useState({});       // 'n<i>' -> chosen caseNumber (override the match)
   const [editRoute, setEditRoute] = React.useState({}); // 'n<i>' -> true when the user is changing the case
@@ -531,49 +532,16 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
     }
     return false;
   };
-  // Deterministic case matching by distinctive name tokens (surnames/first names,
-  // KC keywords) — a lookup, not an AI guess, so a message naming a person always
-  // lands on that person's case.
-  const GEN2 = new Set(['confidential', 'family', 'couple', 'counseling', 'medical', 'assistance', 'faith',
-    'request', 'help', 'care', 'team', 'support', 'member', 'meeting', 'update', 'new', 'kc',
-    'the', 'and', 'jr', 'sr', 'mr', 'mrs', 'ms']);
-  const caseTokenSets = cases.map(c => {
-    const t = new Set();
-    [c.name, ...(c.contacts || []).map(p => p.name)].forEach(s =>
-      (s || '').toLowerCase().split(/[^a-z]+/).forEach(w => { if (w.length >= 3 && !GEN2.has(w)) t.add(w); }));
-    return { c, t };
-  });
-  const wordsOf = (text) => new Set((String(text).toLowerCase().match(/[a-z]+/g) || []));
-  const matchTok = (tok, w) => w.has(tok) || w.has(tok + 's');   // handles plural/possessive (Brightwell→Brightwells)
-  const bestCaseMatch = (text) => {
-    const w = wordsOf(text); let best = null, score = 0;
-    for (const { c, t } of caseTokenSets) { let n = 0; t.forEach(tok => { if (matchTok(tok, w)) n++; }); if (n > score) { score = n; best = c; } }
-    return score > 0 ? best : null;
-  };
-  const MONEY_RE = /\$\s?\d/;
-  const ACTION_RE = /\b(approv\w*|request\w*|asking|cover|paid|pay|rent|bills?|help|fee|gift|card|cobra|premium|deposit|reimburse\w*|tag|repair\w*|counsel\w*|tuition|utilit\w*|insurance|grocer\w*|mortgage|tires?|septic|food|gas|attorney|legal|assist\w*)\b/i;
-  // Turn each money/update message block into a verbatim note tied (by name) to a case.
-  const buildSuggestions = (blocks) => {
-    const noteSuggestions = [];
-    const seen = new Set();
-    for (const b of blocks) {
-      const matched = bestCaseMatch(b.text);
-      if (!(MONEY_RE.test(b.text) || (matched && ACTION_RE.test(b.text)))) continue; // skip pure chatter
-      const cn = matched ? matched.caseNumber : '';
-      const k = cn + '|' + norm(b.text);
-      if (seen.has(k)) continue;                                 // identical message posted twice
-      seen.add(k);
-      noteSuggestions.push({ caseNumber: cn, by: b.sender, date: b.ts, text: (b.text || '').trim() });
-    }
-    return { noteSuggestions, newOpportunities: [] };
-  };
+  // Safety-net dedupe on top of the AI's matches: drop a suggestion whose exact
+  // words (or whose dollar amounts) are already recorded on the case it was
+  // matched to, so re-uploading the same export doesn't re-propose old news.
   const dedupe = (sugg) => {
     const noteSuggestions = (sugg.noteSuggestions || []).filter(s => {
       const opp = byNum[s.caseNumber];
       if (opp && alreadyAsNote(opp, s.text)) return false;      // exact words already a note on this case
-      return true;                                              // keep matched AND unmatched (you route unmatched)
+      return true;
     });
-    return { noteSuggestions, newOpportunities: [] };
+    return { noteSuggestions, unmatched: sugg.unmatched || [] };
   };
 
   // Parse one file by type → [{ts,sender,text}]. Unknown/media files yield [].
@@ -644,12 +612,28 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
       const relevant = groupConsecutive(fresh).filter(isRelevant);
       setNewCount(relevant.length);
       if (relevant.length === 0) {
-        setResult({ noteSuggestions: [], newOpportunities: [] });
+        setResult({ noteSuggestions: [], unmatched: [] });
         setPhase('review'); return;
       }
-      // Deterministic: match each money/update message to a case by name and keep
-      // the deacon's verbatim words. No AI guessing → nothing gets missed.
-      setResult(dedupe(buildSuggestions(relevant)));
+      // AI matches each money/update message to a case by name, using the full
+      // conversational context of each block — and keeps the deacon's verbatim
+      // words. It never invents a new opportunity; anything it can't match by
+      // name comes back in `unmatched` for a deacon to route manually.
+      const resp = await fetch('/api/groupme-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: relevant, opportunities: compactOpportunities(cases) }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        setError(data.error || 'Analysis failed. Please try again.');
+        setPhase('error'); return;
+      }
+      if (data.aiAvailable === false) {
+        setError("AI isn't configured on the server, so suggestions can't be generated. (An ANTHROPIC_API_KEY is required.)");
+        setPhase('error'); return;
+      }
+      setResult(dedupe(data.suggestions || { noteSuggestions: [], unmatched: [] }));
       setPhase('review');
     } catch (e) { setError(e.message || 'Could not read that file.'); setPhase('error'); }
   };
@@ -663,19 +647,17 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
   const oppOptions = cases.slice()
     .sort((a, b) => (a.status === 'completed') - (b.status === 'completed') || a.name.localeCompare(b.name))
     .map(c => ({ num: c.caseNumber, label: `#${c.caseNumber} · ${c.name}` }));
-  const acceptOpp  = (i, s) => { onAcceptOpportunity({ name: s.name, firstNote: (s.firstNote || '').trim(), date: s.date, by: s.by }); decide('o' + i, 'accepted'); };
 
   const finish = () => {
     const added     = Object.entries(decisions).filter(([k, v]) => k[0] === 'n' && v === 'accepted').length;
-    const created   = Object.entries(decisions).filter(([k, v]) => k[0] === 'o' && v === 'accepted').length;
     const dismissed = Object.values(decisions).filter(v => v === 'dismissed').length;
-    onRecordSync({ lastScanTs: maxTs || cutoff, added, created, dismissed });
-    setSummary({ added, created, dismissed }); setPhase('done');
+    onRecordSync({ lastScanTs: maxTs || cutoff, added, dismissed });
+    setSummary({ added, dismissed }); setPhase('done');
   };
 
   const notes = result.noteSuggestions || [];
-  const opps = result.newOpportunities || [];
-  const total = notes.length + opps.length;
+  const unmatched = result.unmatched || [];
+  const total = notes.length;
   const decidedCount = Object.keys(decisions).length;
 
   const Card = ({ done, accepted, children, onAccept, onDismiss, acceptLabel, disabled }) => (
@@ -765,7 +747,7 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
         </div>
       )}
 
-      {phase === 'review' && total === 0 && (
+      {phase === 'review' && total === 0 && unmatched.length === 0 && (
         <div className="empty">
           <Icon name="check" size={22} stroke={1.6} />
           <div className="empty-title">Nothing missing to add</div>
@@ -780,12 +762,12 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
         </div>
       )}
 
-      {phase === 'review' && total > 0 && (
+      {phase === 'review' && (total > 0 || unmatched.length > 0) && (
         <>
           <div className="page-sub" style={{ margin: '4px 0 16px' }}>
-            {notes.length} suggested note{notes.length === 1 ? '' : 's'} and {opps.length} possible new
-            opportunit{opps.length === 1 ? 'y' : 'ies'} from {newCount} new message{newCount === 1 ? '' : 's'}.
-            Review each below.
+            {notes.length} suggested note{notes.length === 1 ? '' : 's'}
+            {unmatched.length > 0 && <>, and {unmatched.length} unmatched message{unmatched.length === 1 ? '' : 's'}</>}
+            {' '}from {newCount} new message{newCount === 1 ? '' : 's'}. Review each below.
           </div>
 
           {notes.length > 0 && <h2 className="section-h">Updates for existing opportunities</h2>}
@@ -823,25 +805,28 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
             );
           })}
 
-          {opps.length > 0 && <h2 className="section-h" style={{ marginTop: 18 }}>Possible new opportunities</h2>}
-          {opps.map((s, i) => {
-            const key = 'o' + i; const st = decisions[key];
-            return (
-              <Card key={key} done={!!st} accepted={st === 'accepted'}
-                    acceptLabel="Create opportunity"
-                    onAccept={() => acceptOpp(i, s)} onDismiss={() => decide(key, 'dismissed')}>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>
-                  {s.name}{s.date && <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> · {fmt3.dateFull(s.date)}</span>}
+          {unmatched.length > 0 && (
+            <>
+              <h2 className="section-h" style={{ marginTop: 18 }}>Unmatched messages</h2>
+              <div className="page-sub" style={{ margin: '2px 0 10px' }}>
+                These mentioned money or an update but didn't match an existing opportunity by name —
+                create the case manually if one is needed.
+              </div>
+              {unmatched.map((s, i) => (
+                <div key={'u' + i} style={{ padding: '12px 16px', border: '1px solid var(--border, #e5e7eb)', borderRadius: 10, marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    {s.by && <span style={{ fontWeight: 600, fontSize: 13 }}>{s.by}</span>}
+                    {s.date && <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>· {fmt3.dateFull(s.date)}</span>}
+                  </div>
+                  <div style={{ fontSize: 14, marginTop: 4 }}>{s.text}</div>
                 </div>
-                <div style={{ fontSize: 14, marginTop: 4 }}>{s.firstNote}</div>
-                {s.source && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, fontStyle: 'italic' }}>source: {s.source}</div>}
-              </Card>
-            );
-          })}
+              ))}
+            </>
+          )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border, #e5e7eb)' }}>
             <Btn3 variant="primary" onClick={finish}>Done</Btn3>
-            <span className="page-sub" style={{ margin: 0 }}>{decidedCount} of {total} reviewed</span>
+            {total > 0 && <span className="page-sub" style={{ margin: 0 }}>{decidedCount} of {total} reviewed</span>}
           </div>
         </>
       )}
@@ -851,7 +836,7 @@ function SyncView3({ me, cases, sync, onAcceptNote, onAcceptOpportunity, onRecor
           <Icon name="check" size={22} stroke={1.6} />
           <div className="empty-title">Sync complete</div>
           <div className="empty-body">
-            Added {summary.added} note{summary.added === 1 ? '' : 's'} and created {summary.created} opportunit{summary.created === 1 ? 'y' : 'ies'}; dismissed {summary.dismissed}.
+            Added {summary.added} note{summary.added === 1 ? '' : 's'}; dismissed {summary.dismissed}.
           </div>
           <div style={{ marginTop: 14 }}>
             <Btn3 variant="ghost" onClick={() => { setPhase('idle'); setFileName(''); }}>Sync another export</Btn3>

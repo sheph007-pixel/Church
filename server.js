@@ -584,7 +584,9 @@ app.post('/api/ai/complete', async (req, res) => {
 
 // GroupMe Sync — analyze NEW chat messages against EXISTING opportunities and
 // propose additive suggestions only. Returns { ok, suggestions:{noteSuggestions,
-// newOpportunities}, aiAvailable }. Never mutates anything — the client applies
+// unmatched}, aiAvailable }. Never mutates anything, and never invents a new
+// opportunity — a qualifying message that doesn't match an existing one by name
+// is reported in `unmatched` for a deacon to handle manually. The client applies
 // accepted items via the normal append-only paths.
 app.post('/api/groupme-suggest', async (req, res) => {
   const { messages, opportunities } = req.body || {};
@@ -592,7 +594,7 @@ app.post('/api/groupme-suggest', async (req, res) => {
     return res.status(400).json({ error: 'messages[] and opportunities[] required' });
   }
   if (messages.length === 0) {
-    return res.json({ ok: true, aiAvailable: true, suggestions: { noteSuggestions: [], newOpportunities: [] } });
+    return res.json({ ok: true, aiAvailable: true, suggestions: { noteSuggestions: [], unmatched: [] } });
   }
 
   const oppLines = opportunities.map(o =>
@@ -610,7 +612,7 @@ OWN WORDS, copied verbatim. Do not paraphrase, summarize, shorten, interpret, or
 Return STRICT JSON only (no prose, no code fences) with this exact shape:
 {
   "noteSuggestions": [ { "caseNumber": "<existing # it belongs to>", "by": "<the deacon who sent the message>", "date": "YYYY-MM-DD", "text": "<the deacon's message copied VERBATIM — exact words, no changes>" } ],
-  "newOpportunities": [ { "name": "<person/family or 'Confidential — ...'>", "by": "<the deacon who sent the message>", "date": "YYYY-MM-DD", "firstNote": "<the deacon's message copied VERBATIM>" } ]
+  "unmatched": [ { "by": "<the deacon who sent the message>", "date": "YYYY-MM-DD", "text": "<the deacon's message copied VERBATIM — exact words, no changes>" } ]
 }
 
 RULES:
@@ -626,12 +628,12 @@ RULES:
   report. Example: "met w Amanda J … I'm asking that we cover the $350 fee" → the $350 belongs to Amanda
   Jones, NOT to anyone else. NEVER attach an amount to an opportunity whose person isn't named in that report.
 - "by" = the Sender of the message. Always fill it in.
-- "text"/"firstNote" = the deacon's message(s) copied VERBATIM (exact words). Include the full relevant
-  message; if the report spans several of that sender's lines, include those lines verbatim. Do NOT
-  paraphrase, summarize, or add commentary — the deacon's actual words go into the record.
-- If the person isn't clearly one of the existing opportunities, make it a newOpportunity — do NOT guess a
-  random existing "#". But an update about someone who IS already an existing opportunity (e.g. the
-  Brightwells) is a noteSuggestion on that opportunity, NOT a newOpportunity.
+- "text" = the deacon's message(s) copied VERBATIM (exact words). Include the full relevant message; if the
+  report spans several of that sender's lines, include those lines verbatim. Do NOT paraphrase, summarize,
+  or add commentary — the deacon's actual words go into the record.
+- If the person isn't clearly one of the existing opportunities, put it in "unmatched" instead — do NOT guess
+  a random existing "#", and do NOT invent a new opportunity. An update about someone who IS already an
+  existing opportunity (e.g. the Brightwells) is a noteSuggestion on that opportunity, NOT unmatched.
 - ADDITIVE ONLY: propose what is MISSING. If the event (that person + that amount/decision) is already in
   that opportunity's "recorded notes", SKIP it. Never restate, merge, or "correct" existing notes.
 - Ignore everything that isn't (a) or (b): bare "Approve"/"Approved" replies, scheduling/logistics, prayer
@@ -657,18 +659,18 @@ ${msgs.map(m => `[${m.ts}] ${m.sender}: ${m.text}`).join('\n')}`;
   try {
     // Chunk to keep each call within limits; merge results.
     const CHUNK = 12;
-    const merged = { noteSuggestions: [], newOpportunities: [] };
+    const merged = { noteSuggestions: [], unmatched: [] };
     let sawAI = false;
     for (let i = 0; i < messages.length; i += CHUNK) {
-      const raw = await callLLM(buildPrompt(messages.slice(i, i + CHUNK)), 4096, 'claude-sonnet-4-6', 0);
+      const raw = await callLLM(buildPrompt(messages.slice(i, i + CHUNK)), 4096, 'claude-sonnet-5', 0);
       if (raw == null) continue; // no API key / failure
       sawAI = true;
       const parsed = parseJSON(raw);
       if (!parsed) continue;
       if (Array.isArray(parsed.noteSuggestions)) merged.noteSuggestions.push(...parsed.noteSuggestions);
-      if (Array.isArray(parsed.newOpportunities)) merged.newOpportunities.push(...parsed.newOpportunities);
+      if (Array.isArray(parsed.unmatched)) merged.unmatched.push(...parsed.unmatched);
     }
-    if (!sawAI) return res.json({ ok: false, aiAvailable: false, suggestions: { noteSuggestions: [], newOpportunities: [] } });
+    if (!sawAI) return res.json({ ok: false, aiAvailable: false, suggestions: { noteSuggestions: [], unmatched: [] } });
     res.json({ ok: true, aiAvailable: true, suggestions: merged });
   } catch (e) {
     console.error('GroupMe suggest error:', e.message);
