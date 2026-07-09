@@ -469,6 +469,7 @@ function SyncView3({ me, cases, sync, onAcceptNote, onRecordSync }) {
   // Where the previous scan ended (so we only analyze new material this time).
   const lastScanTs = sync && (sync.lastScanTs || sync.lastSyncedTs);
   const [lookback, setLookback] = React.useState(lastScanTs ? 'last' : '60'); // 'last' | '30' | '60' | '90' | 'all'
+  const [showLookback, setShowLookback] = React.useState(false); // reveal the scan-window picker (defaults hidden)
 
   // Preload the (lazy) spreadsheet parser when the Sync screen opens, so an .xlsx
   // upload is ready instantly. Non-admin screens never load it.
@@ -696,39 +697,42 @@ function SyncView3({ me, cases, sync, onAcceptNote, onRecordSync }) {
 
       {(phase === 'idle' || phase === 'error') && (
         <>
-          <label className="file-drop" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '20px', border: '1px dashed #cbd5e1', borderRadius: 10, cursor: 'pointer' }}>
-            <input type="file" webkitdirectory="" directory="" multiple hidden
-                   onChange={e => onPick(e.target.files)} />
-            <Icon name="upload" size={18} stroke={1.7} />
-            <span>Upload the GroupMe export <strong>folder</strong> — the whole folder, media and all</span>
-          </label>
-          <label className="file-drop" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', marginTop: 10, border: '1px dashed #cbd5e1', borderRadius: 10, cursor: 'pointer' }}>
-            <input type="file" accept=".json,.txt,.csv,.xlsx,.xls" hidden
-                   onChange={e => onPick(e.target.files)} />
-            <Icon name="file" size={16} stroke={1.7} />
-            <span className="page-sub" style={{ margin: 0 }}>…or a single file (message.json, .txt, .csv, or .xlsx)</span>
-          </label>
+          <div style={{ border: '1px dashed #cbd5e1', borderRadius: 10, padding: '28px 20px', textAlign: 'center' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+              <input type="file" webkitdirectory="" directory="" multiple hidden
+                     onChange={e => onPick(e.target.files)} />
+              <Icon name="upload" size={22} stroke={1.6} />
+              <span style={{ fontSize: 15, fontWeight: 600 }}>Upload your GroupMe export folder</span>
+              <span className="page-sub" style={{ margin: 0 }}>The whole folder, media and all</span>
+            </label>
+            <label className="link-btn" style={{ display: 'inline-block', marginTop: 14, fontSize: 13, cursor: 'pointer' }}>
+              <input type="file" accept=".json,.txt,.csv,.xlsx,.xls" hidden
+                     onChange={e => onPick(e.target.files)} />
+              or choose a single file (message.json, .txt, .csv, or .xlsx)
+            </label>
+          </div>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, fontSize: 14 }}>
-            <span style={{ fontWeight: 600 }}>Analyze</span>
+          <div className="page-sub" style={{ marginTop: 12 }}>
+            Scanning {lookback === 'last'
+              ? (lastScanTs ? <>new material since <strong>{fmt3.dateFull(lastScanTs)}</strong></> : 'new material since the last scan')
+              : lookback === 'all' ? 'the entire export' : `the last ${lookback} days`}.{' '}
+            <button type="button" className="link-btn" onClick={() => setShowLookback(s => !s)}>
+              {showLookback ? 'done' : 'change window'}
+            </button>
+          </div>
+          {showLookback && (
             <select value={lookback} onChange={e => setLookback(e.target.value)}
-                    style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: 14, background: 'var(--bg)', color: 'var(--text)' }}>
+                    style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: 14, background: 'var(--bg)', color: 'var(--text)' }}>
               <option value="last">new material since the last scan</option>
               <option value="30">the last 30 days</option>
               <option value="60">the last 60 days</option>
               <option value="90">the last 90 days</option>
               <option value="all">the entire export</option>
             </select>
-          </label>
+          )}
           <div className="page-sub" style={{ marginTop: 10 }}>
-            {lastScanTs
-              ? <>Set this <em>before</em> you choose the folder. By default it picks up right after your last
-                  scan (covered through <strong>{fmt3.dateFull(lastScanTs)}</strong>), so re-uploading the same
-                  export only analyzes the new conversation since then.</>
-              : <>Set this <em>before</em> you choose the folder. After this first scan it'll remember where it
-                  ended and pick up from there next time.</>}
-            {' '}The AI matches messages to existing opportunities by name (e.g. "Amanda J" → Amanda Jones),
-            keeps only case updates and fund approvals/requests, skips back-and-forth, drops anything already
+            The AI matches messages to existing opportunities by name (e.g. "Amanda J" → Amanda Jones), keeps
+            only case updates and fund approvals/requests, skips back-and-forth, drops anything already
             recorded, and you review &amp; Accept each item.
           </div>
           {phase === 'error' && (
