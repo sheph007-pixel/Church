@@ -92,25 +92,26 @@ async function genCaseSummary(c) {
     .join('\n\n');
   // DURABLE RULE: summaries never tally totals or focus on money spent — they're a
   // quick "where does this case stand" update, not a spend tracker. See STRICT RULES.
-  const prompt = `You are writing a brief spoken-style status update on a church benevolence record, meant to be read aloud to the care team so everyone quickly understands the family's situation and where the case stands. Use ONLY the notes provided below — nothing else.
+  const prompt = `You are writing a brief status update on a church benevolence record for a Diaconate member who is NOT involved in this case day-to-day — someone who only hears about it at the monthly meeting and needs to feel instantly caught up, with zero assumed prior context. Use ONLY the notes provided below — nothing else.
 
 STRICT RULES:
-- Base every statement strictly on the notes below. If the notes don't say it, don't write it.
+- Base every statement strictly on the notes below. If the notes don't say it, don't write it. If you're not confident something is directly stated, leave it out rather than guess.
 - Do not guess, infer beyond what is written, or add any outside facts, assumptions, or recommendations.
 - Do not use outside knowledge about any person, place, employer, or organization.
 - Do not mention deacons, staff, or care-team members by name, or reference who wrote the notes.
 - Do NOT add up, total, or tally money. Never state a cumulative or "total" amount given, and never frame the update around how much has been spent helping this person. A specific recent dollar amount may be mentioned only if it's genuinely part of where the case stands now — but the summary centers on the situation, not the dollars.
 - Weight the MOST RECENT notes most heavily. Anchor the summary on the latest update and the current status; use older notes only as brief context, and don't lead with or dwell on old history that newer notes have already moved past.
+- Avoid internal shorthand, acronyms, or anything that assumes the reader already knows the background — write for someone hearing about this case for the first time.
 
 NOTES (oldest first; the last one is the most recent):
 ${notesText}
 
-Write ${SUMMARY_LEN_NOTE}: lead with the most recent development and where things stand right now, adding only enough earlier context to make it make sense. Lead with the situation, not money. Plain, clear language that someone could read aloud to a group and instantly understand. No greetings or preamble; don't begin with "This case" or "The case" — just describe the situation.`;
+Write ${SUMMARY_LEN_NOTE}: lead with the most recent development and where things stand right now, adding only enough earlier context to make it make sense to someone hearing about this case for the first time. Lead with the situation, not money. Plain, clear language, no jargon. No greetings or preamble; don't begin with "This case" or "The case" — just describe the situation.`;
   try {
     const resp = await fetch('/api/ai/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, model: 'claude-sonnet-4-6' }),
+      body: JSON.stringify({ prompt, model: 'claude-sonnet-5' }),
     });
     if (!resp.ok) return null;
     const { result } = await resp.json();
