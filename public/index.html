@@ -1972,10 +1972,18 @@ function App() {
     return true;
   };
   // Record a completed sync (cutoff advance + audit entry). GroupMe Sync never
-  // creates opportunities on its own — a message that doesn't match an existing
-  // one by name is surfaced for a deacon to create the case manually elsewhere.
-  const recordSync = ({ lastScanTs, added, dismissed }) => {
-    setSync({ lastScanTs });
+  // creates opportunities on its own — a message that doesn't auto-match an
+  // existing one by name still goes through the same Tie-to/Add-note review,
+  // just without a case pre-filled. Merges dismissedKeys (not a full replace)
+  // so a deacon's Dismiss decisions accumulate across syncs instead of being
+  // wiped by the next one — since the scan window is a rolling last-30-days
+  // with no cursor, a dismissed message would otherwise keep resurfacing.
+  const recordSync = ({ lastScanTs, added, dismissed, dismissedKeys }) => {
+    setSync(s => ({
+      ...(s || {}),
+      lastScanTs,
+      dismissedKeys: Array.from(new Set([...((s && s.dismissedKeys) || []), ...(dismissedKeys || [])])),
+    }));
     logEvent(null, 'groupme_synced', { added, dismissed });
   };
 
@@ -2105,7 +2113,7 @@ function App() {
               onAddMember={addMember} onUpdateMember={updateMember}
               onRemoveMember={removeMember} onSetLeader={setTeamLeader} />;
   } else if (nav === 'sync') {
-    main = <SyncView3 me={me} cases={cases}
+    main = <SyncView3 me={me} cases={cases} sync={sync}
               onAcceptNote={acceptNoteSuggestion}
               onRecordSync={recordSync} />;
   } else {

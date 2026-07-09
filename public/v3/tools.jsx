@@ -458,11 +458,11 @@ function AddDeaconModal({ onClose, onAdd }) {
 // matches the dates already in the GroupMe file. No "since last scan" cursor
 // to track or picker to configure.
 const LOOKBACK_DAYS = 30;
-function SyncView3({ me, cases, onAcceptNote, onRecordSync }) {
+function SyncView3({ me, cases, sync, onAcceptNote, onRecordSync }) {
   const [phase, setPhase] = React.useState('idle'); // idle | analyzing | review | error | done
   const [fileName, setFileName] = React.useState('');
   const [error, setError] = React.useState('');
-  const [result, setResult] = React.useState({ noteSuggestions: [], unmatched: [] });
+  const [result, setResult] = React.useState({ noteSuggestions: [], noteKeys: [], review: [] });
   const [decisions, setDecisions] = React.useState({}); // key -> 'accepted' | 'dismissed' | 'error'
   const [routes, setRoutes] = React.useState({});       // 'n<i>' -> chosen caseNumber (override the match)
   const [editRoute, setEditRoute] = React.useState({}); // 'n<i>' -> true when the user is changing the case
@@ -505,6 +505,12 @@ function SyncView3({ me, cases, onAcceptNote, onRecordSync }) {
     .map(a => a.replace(/[^0-9.]/g, '').replace(/\.0+$/, '').replace(/\.$/, ''));
   const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
   const toks = (s) => new Set(norm(s).split(' ').filter(w => w.length >= 3 && !['the', 'and'].includes(w)));
+  // Composite identity for a parsed message block (no stable id survives parsing —
+  // see collectMessages). Used to persist Dismiss decisions across syncs.
+  const msgKey = (m) => m.ts + '|' + m.sender + '|' + m.text;
+  // Looser key for matching an AI-returned suggestion (by/text only, no ts) back to
+  // its source block.
+  const fuzzyKey = (sender, text) => (sender || '').trim().toLowerCase() + '|' + norm(text);
   const matchCase = (name) => {
     const n = norm(name); if (!n) return null;
     const nt = toks(name); let best = null, score = 0;
@@ -542,7 +548,7 @@ function SyncView3({ me, cases, onAcceptNote, onRecordSync }) {
       if (opp && alreadyAsNote(opp, s.text)) return false;      // exact words already a note on this case
       return true;
     });
-    return { noteSuggestions, unmatched: sugg.unmatched || [] };
+    return { noteSuggestions };
   };
 
   // Parse one file by type → [{ts,sender,text}]. Unknown/media files yield [].
@@ -564,7 +570,7 @@ function SyncView3({ me, cases, onAcceptNote, onRecordSync }) {
     const seen = new Set();
     const merged = [];
     for (const m of all) {
-      const k = m.ts + '|' + m.sender + '|' + m.text;
+      const k = msgKey(m);
       if (!seen.has(k)) { seen.add(k); merged.push(m); }
     }
     return merged.sort((a, b) => new Date(a.ts) - new Date(b.ts));
@@ -608,16 +614,20 @@ function SyncView3({ me, cases, onAcceptNote, onRecordSync }) {
       const fresh = parsed.filter(m => new Date(m.ts) > new Date(cut));
       // Group each deacon's burst, then keep only money/name-relevant blocks so a
       // request can't be missed and its amount stays tied to the right person.
-      const relevant = groupConsecutive(fresh).filter(isRelevant);
+      // Already-dismissed blocks (from a prior sync) are dropped here too, so
+      // they're never re-sent to the AI and never asked about again.
+      const dismissedSet = new Set((sync && sync.dismissedKeys) || []);
+      const relevant = groupConsecutive(fresh).filter(isRelevant).filter(m => !dismissedSet.has(msgKey(m)));
       setNewCount(relevant.length);
       if (relevant.length === 0) {
-        setResult({ noteSuggestions: [], unmatched: [] });
+        setResult({ noteSuggestions: [], noteKeys: [], review: [] });
         setPhase('review'); return;
       }
       // AI matches each money/update message to a case by name, using the full
       // conversational context of each block — and keeps the deacon's verbatim
       // words. It never invents a new opportunity; anything it can't match by
-      // name comes back in `unmatched` for a deacon to route manually.
+      // name is reconciled into `review` below (the AI's own `unmatched` field,
+      // if any, is superseded by that reconciliation and not read directly).
       const resp = await fetch('/api/groupme-suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -632,15 +642,33 @@ function SyncView3({ me, cases, onAcceptNote, onRecordSync }) {
         setError("AI isn't configured on the server, so suggestions can't be generated. (An ANTHROPIC_API_KEY is required.)");
         setPhase('error'); return;
       }
-      setResult(dedupe(data.suggestions || { noteSuggestions: [], unmatched: [] }));
+      // Reconcile against `relevant` (ground truth, has the real per-block ts) rather
+      // than trusting the AI's "skip"/"unmatched" instructions — anything it didn't
+      // clearly propose as a note ends up in `review`, so nothing sent to the AI can
+      // be silently dropped from the deacon's view, regardless of what the AI returns.
+      const { noteSuggestions } = dedupe(data.suggestions || { noteSuggestions: [] });
+      const blockByFuzzyKey = new Map(relevant.map(b => [fuzzyKey(b.sender, b.text), b]));
+      const consumed = new Set();
+      const noteKeys = noteSuggestions.map(s => {
+        const block = blockByFuzzyKey.get(fuzzyKey(s.by, s.text));
+        if (block) { consumed.add(msgKey(block)); return msgKey(block); }
+        // AI didn't echo closely enough to match back to its source block — rare,
+        // and harmless: the block just also shows up in `review` (safe duplication,
+        // not silent loss); see the note on this in the plan/PR.
+        return null;
+      });
+      const review = relevant
+        .filter(b => !consumed.has(msgKey(b)))
+        .map(b => ({ caseNumber: '', by: b.sender, date: b.ts.slice(0, 10), text: b.text, ts: b.ts, sender: b.sender }));
+      setResult({ noteSuggestions, noteKeys, review });
       setPhase('review');
     } catch (e) { setError(e.message || 'Could not read that file.'); setPhase('error'); }
   };
 
   const decide = (key, status) => setDecisions(d => ({ ...d, [key]: status }));
-  const acceptNote = (i, s) => {
-    const cn = routes['n' + i] || s.caseNumber;
-    decide('n' + i, onAcceptNote(cn, { text: (s.text || '').trim(), date: s.date, by: s.by }) ? 'accepted' : 'error');
+  const acceptItem = (key, s) => {
+    const cn = routes[key] || s.caseNumber;
+    decide(key, onAcceptNote(cn, { text: (s.text || '').trim(), date: s.date, by: s.by }) ? 'accepted' : 'error');
   };
   // Opportunities for the correction dropdown (active first), [{num,label}].
   const oppOptions = cases.slice()
@@ -648,15 +676,28 @@ function SyncView3({ me, cases, onAcceptNote, onRecordSync }) {
     .map(c => ({ num: c.caseNumber, label: `#${c.caseNumber} · ${c.name}` }));
 
   const finish = () => {
-    const added     = Object.entries(decisions).filter(([k, v]) => k[0] === 'n' && v === 'accepted').length;
-    const dismissed = Object.values(decisions).filter(v => v === 'dismissed').length;
-    onRecordSync({ lastScanTs: maxTs || cutoff, added, dismissed });
+    const { noteKeys = [], review = [] } = result;
+    const dismissedKeysThisSession = [];
+    let added = 0, dismissed = 0;
+    Object.entries(decisions).forEach(([key, status]) => {
+      if (status === 'accepted') added++;
+      if (status !== 'dismissed') return;
+      dismissed++;
+      if (key[0] === 'n') {
+        const k = noteKeys[Number(key.slice(1))];
+        if (k) dismissedKeysThisSession.push(k);
+      } else if (key[0] === 'r') {
+        const r = review[Number(key.slice(1))];
+        if (r) dismissedKeysThisSession.push(msgKey(r));
+      }
+    });
+    onRecordSync({ lastScanTs: maxTs || cutoff, added, dismissed, dismissedKeys: dismissedKeysThisSession });
     setSummary({ added, dismissed }); setPhase('done');
   };
 
   const notes = result.noteSuggestions || [];
-  const unmatched = result.unmatched || [];
-  const total = notes.length;
+  const review = result.review || [];
+  const total = notes.length + review.length;
   const decidedCount = Object.keys(decisions).length;
 
   const Card = ({ done, accepted, children, onAccept, onDismiss, acceptLabel, disabled }) => (
@@ -677,6 +718,43 @@ function SyncView3({ me, cases, onAcceptNote, onRecordSync }) {
       </div>
     </div>
   );
+
+  // Shared card for both "Updates for existing opportunities" (case pre-filled)
+  // and "Needs your review" (caseNumber '' — same dropdown/Add-note/Dismiss UI,
+  // just starting unassigned).
+  const renderSuggestionCard = (key, s) => {
+    const st = decisions[key];
+    const chosen = routes[key] || s.caseNumber;
+    const target = byNum[chosen];
+    return (
+      <Card key={key} done={!!st} accepted={st === 'accepted'}
+            disabled={!target}
+            acceptLabel="Add note"
+            onAccept={() => acceptItem(key, s)} onDismiss={() => decide(key, 'dismissed')}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {(target && !editRoute[key]) ? (
+            <>
+              <span style={{ fontWeight: 700, fontSize: 14 }}>#{target.caseNumber} · {target.name}</span>
+              <button className="link-btn" style={{ fontSize: 12 }} onClick={() => setEditRoute(r => ({ ...r, [key]: true }))}>change</button>
+            </>
+          ) : (
+            <>
+              <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-muted)' }}>Tie to:</span>
+              <select value={chosen} onChange={e => { setRoutes(r => ({ ...r, [key]: e.target.value })); setEditRoute(r => ({ ...r, [key]: false })); }}
+                      style={{ padding: '5px 8px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 600, background: 'var(--bg)', color: 'var(--text)', maxWidth: '100%' }}>
+                <option value="">— choose opportunity —</option>
+                {oppOptions.map(o => <option key={o.num} value={o.num}>{o.label}</option>)}
+              </select>
+            </>
+          )}
+          {s.date && <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>· {fmt3.dateFull(s.date)}</span>}
+        </div>
+        {s.by && <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 6 }}>{s.by} reported:</div>}
+        <div style={{ fontSize: 14, marginTop: 2 }}>{s.text}</div>
+        {s.source && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, fontStyle: 'italic' }}>“{s.source}”</div>}
+      </Card>
+    );
+  };
 
   return (
     <div className="tool-view">
@@ -732,7 +810,7 @@ function SyncView3({ me, cases, onAcceptNote, onRecordSync }) {
         </div>
       )}
 
-      {phase === 'review' && total === 0 && unmatched.length === 0 && (
+      {phase === 'review' && total === 0 && (
         <div className="empty">
           <Icon name="check" size={22} stroke={1.6} />
           <div className="empty-title">Nothing missing to add</div>
@@ -747,65 +825,25 @@ function SyncView3({ me, cases, onAcceptNote, onRecordSync }) {
         </div>
       )}
 
-      {phase === 'review' && (total > 0 || unmatched.length > 0) && (
+      {phase === 'review' && total > 0 && (
         <>
           <div className="page-sub" style={{ margin: '4px 0 16px' }}>
             {notes.length} suggested note{notes.length === 1 ? '' : 's'}
-            {unmatched.length > 0 && <>, and {unmatched.length} unmatched message{unmatched.length === 1 ? '' : 's'}</>}
+            {review.length > 0 && <>, and {review.length} item{review.length === 1 ? '' : 's'} needing your review</>}
             {' '}from {newCount} new message{newCount === 1 ? '' : 's'}. Review each below.
           </div>
 
           {notes.length > 0 && <h2 className="section-h">Updates for existing opportunities</h2>}
-          {notes.map((s, i) => {
-            const key = 'n' + i; const st = decisions[key];
-            const chosen = routes[key] || s.caseNumber;
-            const target = byNum[chosen];
-            return (
-              <Card key={key} done={!!st} accepted={st === 'accepted'}
-                    disabled={!target}
-                    acceptLabel="Add note"
-                    onAccept={() => acceptNote(i, s)} onDismiss={() => decide(key, 'dismissed')}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  {(target && !editRoute[key]) ? (
-                    <>
-                      <span style={{ fontWeight: 700, fontSize: 14 }}>#{target.caseNumber} · {target.name}</span>
-                      <button className="link-btn" style={{ fontSize: 12 }} onClick={() => setEditRoute(r => ({ ...r, [key]: true }))}>change</button>
-                    </>
-                  ) : (
-                    <>
-                      <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-muted)' }}>Tie to:</span>
-                      <select value={chosen} onChange={e => { setRoutes(r => ({ ...r, [key]: e.target.value })); setEditRoute(r => ({ ...r, [key]: false })); }}
-                              style={{ padding: '5px 8px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 600, background: 'var(--bg)', color: 'var(--text)', maxWidth: '100%' }}>
-                        <option value="">— choose opportunity —</option>
-                        {oppOptions.map(o => <option key={o.num} value={o.num}>{o.label}</option>)}
-                      </select>
-                    </>
-                  )}
-                  {s.date && <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>· {fmt3.dateFull(s.date)}</span>}
-                </div>
-                {s.by && <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 6 }}>{s.by} reported:</div>}
-                <div style={{ fontSize: 14, marginTop: 2 }}>{s.text}</div>
-                {s.source && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, fontStyle: 'italic' }}>“{s.source}”</div>}
-              </Card>
-            );
-          })}
+          {notes.map((s, i) => renderSuggestionCard('n' + i, s))}
 
-          {unmatched.length > 0 && (
+          {review.length > 0 && (
             <>
-              <h2 className="section-h" style={{ marginTop: 18 }}>Unmatched messages</h2>
+              <h2 className="section-h" style={{ marginTop: 18 }}>Needs your review</h2>
               <div className="page-sub" style={{ margin: '2px 0 10px' }}>
-                These mentioned money or an update but didn't match an existing opportunity by name —
-                create the case manually if one is needed.
+                Mentioned money or an update but wasn't auto-matched to an opportunity. Pick the opportunity
+                and add a note, or dismiss it if it's not case-related — dismissed items won't come back.
               </div>
-              {unmatched.map((s, i) => (
-                <div key={'u' + i} style={{ padding: '12px 16px', border: '1px solid var(--border, #e5e7eb)', borderRadius: 10, marginBottom: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    {s.by && <span style={{ fontWeight: 600, fontSize: 13 }}>{s.by}</span>}
-                    {s.date && <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>· {fmt3.dateFull(s.date)}</span>}
-                  </div>
-                  <div style={{ fontSize: 14, marginTop: 4 }}>{s.text}</div>
-                </div>
-              ))}
+              {review.map((s, i) => renderSuggestionCard('r' + i, s))}
             </>
           )}
 
