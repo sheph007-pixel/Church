@@ -454,7 +454,11 @@ function AddDeaconModal({ onClose, onAdd }) {
 // existing opportunities only — it never invents a new opportunity). Nothing
 // is written until the leader clicks Accept. Re-uploads are deduped by a
 // moving timestamp cutoff.
-function SyncView3({ me, cases, sync, onAcceptNote, onRecordSync }) {
+// Always scans the most recent LOOKBACK_DAYS of the export — simple and
+// matches the dates already in the GroupMe file. No "since last scan" cursor
+// to track or picker to configure.
+const LOOKBACK_DAYS = 30;
+function SyncView3({ me, cases, onAcceptNote, onRecordSync }) {
   const [phase, setPhase] = React.useState('idle'); // idle | analyzing | review | error | done
   const [fileName, setFileName] = React.useState('');
   const [error, setError] = React.useState('');
@@ -466,10 +470,6 @@ function SyncView3({ me, cases, sync, onAcceptNote, onRecordSync }) {
   const [cutoff, setCutoff] = React.useState(null);
   const [newCount, setNewCount] = React.useState(0);
   const [summary, setSummary] = React.useState(null);
-  // Where the previous scan ended (so we only analyze new material this time).
-  const lastScanTs = sync && (sync.lastScanTs || sync.lastSyncedTs);
-  const [lookback, setLookback] = React.useState(lastScanTs ? 'last' : '60'); // 'last' | '30' | '60' | '90' | 'all'
-  const [showLookback, setShowLookback] = React.useState(false); // reveal the scan-window picker (defaults hidden)
 
   // Preload the (lazy) spreadsheet parser when the Sync screen opens, so an .xlsx
   // upload is ready instantly. Non-admin screens never load it.
@@ -597,15 +597,13 @@ function SyncView3({ me, cases, sync, onAcceptNote, onRecordSync }) {
         setError('No GroupMe messages found in that selection. Upload the export folder (or its message.json / .txt / .xlsx).');
         setPhase('error'); return;
       }
-      // Where to start: pick up after the last scan; otherwise use the chosen window.
-      // (maxParsedTs = the export's most recent message — next scan starts after it.)
+      // Always analyze the most recent LOOKBACK_DAYS of the export, anchored to
+      // the export's own most recent message (not "now") so a slightly stale
+      // upload still covers the right window.
       const maxParsedTs = parsed.reduce((mx, m) => m.ts > mx ? m.ts : mx, parsed[0].ts);
       setMaxTs(maxParsedTs);
       const dayMs = 86400000;
-      let cut;
-      if (lookback === 'all') cut = '1970-01-01T00:00:00.000Z';
-      else if (lookback === 'last') cut = lastScanTs || new Date(new Date(maxParsedTs).getTime() - 90 * dayMs).toISOString();
-      else cut = new Date(new Date(maxParsedTs).getTime() - Number(lookback) * dayMs).toISOString();
+      const cut = new Date(new Date(maxParsedTs).getTime() - LOOKBACK_DAYS * dayMs).toISOString();
       setCutoff(cut);
       const fresh = parsed.filter(m => new Date(m.ts) > new Date(cut));
       // Group each deacon's burst, then keep only money/name-relevant blocks so a
@@ -713,27 +711,10 @@ function SyncView3({ me, cases, sync, onAcceptNote, onRecordSync }) {
           </div>
 
           <div className="page-sub" style={{ marginTop: 12 }}>
-            Scanning {lookback === 'last'
-              ? (lastScanTs ? <>new material since <strong>{fmt3.dateFull(lastScanTs)}</strong></> : 'new material since the last scan')
-              : lookback === 'all' ? 'the entire export' : `the last ${lookback} days`}.{' '}
-            <button type="button" className="link-btn" onClick={() => setShowLookback(s => !s)}>
-              {showLookback ? 'done' : 'change window'}
-            </button>
-          </div>
-          {showLookback && (
-            <select value={lookback} onChange={e => setLookback(e.target.value)}
-                    style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: 14, background: 'var(--bg)', color: 'var(--text)' }}>
-              <option value="last">new material since the last scan</option>
-              <option value="30">the last 30 days</option>
-              <option value="60">the last 60 days</option>
-              <option value="90">the last 90 days</option>
-              <option value="all">the entire export</option>
-            </select>
-          )}
-          <div className="page-sub" style={{ marginTop: 10 }}>
-            The AI matches messages to existing opportunities by name (e.g. "Amanda J" → Amanda Jones), keeps
-            only case updates and fund approvals/requests, skips back-and-forth, drops anything already
-            recorded, and you review &amp; Accept each item.
+            Scans the last {LOOKBACK_DAYS} days of the export. The AI matches messages to existing
+            opportunities by name (e.g. "Amanda J" → Amanda Jones), keeps only case updates and fund
+            approvals/requests, skips back-and-forth, drops anything already recorded, and you review &amp;
+            Accept each item.
           </div>
           {phase === 'error' && (
             <div style={{ marginTop: 14, padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#b91c1c', fontSize: 13 }}>
@@ -757,8 +738,8 @@ function SyncView3({ me, cases, sync, onAcceptNote, onRecordSync }) {
           <div className="empty-title">Nothing missing to add</div>
           <div className="empty-body">
             {newCount === 0
-              ? `No messages in the chosen window (since ${cutoff ? fmt3.dateFull(cutoff) : 'n/a'}). Widen the look-back range and try again.`
-              : `Checked ${newCount} message${newCount === 1 ? '' : 's'} in the window — everything is already recorded on its opportunity. Nothing missing to add.`}
+              ? `No relevant messages in the last ${LOOKBACK_DAYS} days (since ${cutoff ? fmt3.dateFull(cutoff) : 'n/a'}).`
+              : `Checked ${newCount} message${newCount === 1 ? '' : 's'} from the last ${LOOKBACK_DAYS} days — everything is already recorded on its opportunity. Nothing missing to add.`}
           </div>
           <div style={{ marginTop: 14 }}>
             <Btn3 variant="primary" onClick={finish}>Done</Btn3>
