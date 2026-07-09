@@ -666,8 +666,15 @@ function SyncView3({ me, cases, sync, onAcceptNote, onRecordSync }) {
   };
 
   const decide = (key, status) => setDecisions(d => ({ ...d, [key]: status }));
+  // Last-line-of-defense duplicate check, re-verified against the CURRENT case
+  // right before insertion — not just a pre-filter on AI-matched suggestions.
+  // Closes the gap where a "Needs your review" item (already recorded, but not
+  // auto-matched this round so it wasn't caught by dedupe()) gets manually tied
+  // to that same case and creates a real duplicate note.
   const acceptItem = (key, s) => {
     const cn = routes[key] || s.caseNumber;
+    const target = byNum[cn];
+    if (target && alreadyAsNote(target, s.text)) { decide(key, 'duplicate'); return; }
     decide(key, onAcceptNote(cn, { text: (s.text || '').trim(), date: s.date, by: s.by }) ? 'accepted' : 'error');
   };
   // Opportunities for the correction dropdown (active first), [{num,label}].
@@ -681,7 +688,9 @@ function SyncView3({ me, cases, sync, onAcceptNote, onRecordSync }) {
     let added = 0, dismissed = 0;
     Object.entries(decisions).forEach(([key, status]) => {
       if (status === 'accepted') added++;
-      if (status !== 'dismissed') return;
+      // A confirmed duplicate is functionally a dismissal: it's already on the
+      // case, so it should count the same way and never be asked about again.
+      if (status !== 'dismissed' && status !== 'duplicate') return;
       dismissed++;
       if (key[0] === 'n') {
         const k = noteKeys[Number(key.slice(1))];
@@ -700,13 +709,13 @@ function SyncView3({ me, cases, sync, onAcceptNote, onRecordSync }) {
   const total = notes.length + review.length;
   const decidedCount = Object.keys(decisions).length;
 
-  const Card = ({ done, accepted, children, onAccept, onDismiss, acceptLabel, disabled }) => (
+  const Card = ({ done, accepted, doneLabel, children, onAccept, onDismiss, acceptLabel, disabled }) => (
     <div style={{ padding: '14px 16px', border: '1px solid var(--border, #e5e7eb)', borderRadius: 10, marginBottom: 10, background: done ? '#f8fafc' : '#fff', opacity: done ? 0.7 : 1 }}>
       {children}
       <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
         {done ? (
           <span style={{ fontSize: 13, color: accepted ? '#059669' : '#6b7280', fontWeight: 600 }}>
-            <Icon name={accepted ? 'check' : 'close'} size={12} stroke={2} /> {accepted ? 'Added' : 'Dismissed'}
+            <Icon name={accepted ? 'check' : 'close'} size={12} stroke={2} /> {doneLabel}
           </span>
         ) : (
           <>
@@ -726,8 +735,9 @@ function SyncView3({ me, cases, sync, onAcceptNote, onRecordSync }) {
     const st = decisions[key];
     const chosen = routes[key] || s.caseNumber;
     const target = byNum[chosen];
+    const doneLabel = st === 'accepted' ? 'Added' : st === 'duplicate' ? 'Already recorded' : 'Dismissed';
     return (
-      <Card key={key} done={!!st} accepted={st === 'accepted'}
+      <Card key={key} done={!!st} accepted={st === 'accepted'} doneLabel={doneLabel}
             disabled={!target}
             acceptLabel="Add note"
             onAccept={() => acceptItem(key, s)} onDismiss={() => decide(key, 'dismissed')}>
