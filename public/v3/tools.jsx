@@ -43,7 +43,7 @@ function ReportView3({ cases, me, onSelect, onPrint }) {
             <div className="row-left"><div className="row-num">{c.caseNumber}</div></div>
             <div className="row-mid">
               <div className="row-title">{c.name} <StatusPill3 status={c.status} /></div>
-              <div className="row-preview">{c.notes[0]?.text || 'No notes yet'}</div>
+              <div className="row-preview">{notesNewestFirst(c.notes)[0]?.text || 'No notes yet'}</div>
             </div>
             <div className="row-meta"><AvStack3 ids={caseAuthors(c)} size={20} /></div>
             <div className="row-time">{fmt3.relative(c.lastActivity)}</div>

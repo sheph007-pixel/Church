@@ -280,7 +280,7 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport, summ
       ) : (
         <div className="rows">
           {sorted.map(c => {
-            const latest = c.notes[0];
+            const latest = notesNewestFirst(c.notes)[0];
             // Preview the system-generated summary (the quick "where it stands" read);
             // fall back to the latest note until a summary has been generated.
             const sum = summaries && summaries[c.id];

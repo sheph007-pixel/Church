@@ -281,7 +281,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
           )}
           <div className="timeline">
             {c.notes.length === 0 && <div className="empty-line">No notes yet.</div>}
-            {c.notes.map(n => {
+            {notesNewestFirst(c.notes).map(n => {
               const a = team.find(t => t.id === n.author) || { name: 'Admin', initials: 'AD' };
               return <NoteItem3 key={n.id} n={n} author={a} me={me} caseId={c.id} onEditNote={onEditNote} />;
             })}

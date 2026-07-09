@@ -66,6 +66,12 @@ function caseLastActivity(c) {
   return best;
 }
 
+// Notes aren't guaranteed to be stored in date order (a GroupMe-imported note
+// can land at the front of the array with an old date). Anything that needs
+// "the most recent note" or "the oldest note" should sort through this rather
+// than trusting notes[0]/notes[length-1].
+const notesNewestFirst = (notes) => (notes || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+
 // Active deacons recently involved on a case — derived from note authors.
 function caseAuthors(c) {
   const seen = new Set();
@@ -86,7 +92,10 @@ const SUMMARY_LEN_NOTE = 'one or two sentences, roughly 25-40 words total';
 
 async function genCaseSummary(c) {
   if (c.notes.length === 0) return null;
-  const ordered = c.notes.slice().reverse(); // oldest → newest
+  // Sort directly by date rather than assuming storage order — notes[] isn't
+  // guaranteed to be newest-first (see notesNewestFirst), and getting this
+  // wrong mislabels the wrong note as MOST RECENT below.
+  const ordered = c.notes.slice().sort((a, b) => new Date(a.date) - new Date(b.date)); // oldest → newest
   const notesText = ordered
     .map((n, i) => `[${fmt3.dateFull(n.date)}]${i === ordered.length - 1 ? ' (MOST RECENT)' : ''} ${n.text}`)
     .join('\n\n');
@@ -254,7 +263,7 @@ function eventDetailText(e) {
 function seedEvents() {
   const events = [];
   CASES.forEach(c => {
-    const opener = c.notes.length ? c.notes[c.notes.length - 1].author : 'tm1';
+    const opener = c.notes.length ? notesNewestFirst(c.notes).slice(-1)[0].author : 'tm1';
     events.push({
       id: 'e_open_' + c.id, caseId: c.id,
       at: c.opened + 'T09:00:00',
@@ -404,23 +413,26 @@ function latestKnownTs(cases) {
 
 // Compact opportunity list sent to the AI so it can match messages by name/context.
 function compactOpportunities(cases) {
-  return (cases || []).map(c => ({
-    caseNumber: c.caseNumber,
-    name: c.name,
-    status: c.status,
-    lastNoteDate: (c.notes && c.notes[0]) ? fmt3.dateFull(c.notes[0].date) : '',
-    // Condensed recorded history so the AI can tell what's ALREADY logged and
-    // avoid re-proposing it (capped to keep the prompt reasonable).
-    recorded: (c.notes || [])
-      .map(n => `(${fmt3.dateFull(n.date)}) ${n.text}`)
-      .join(' • ')
-      .slice(0, 5000),
-  }));
+  return (cases || []).map(c => {
+    const newest = notesNewestFirst(c.notes)[0];
+    return {
+      caseNumber: c.caseNumber,
+      name: c.name,
+      status: c.status,
+      lastNoteDate: newest ? fmt3.dateFull(newest.date) : '',
+      // Condensed recorded history so the AI can tell what's ALREADY logged and
+      // avoid re-proposing it (capped to keep the prompt reasonable).
+      recorded: (c.notes || [])
+        .map(n => `(${fmt3.dateFull(n.date)}) ${n.text}`)
+        .join(' • ')
+        .slice(0, 5000),
+    };
+  });
 }
 
 Object.assign(window, {
   TEAM, ME_ID, GROUPME_URL, STATUSES, CASES, fmt3, caseAuthors, caseLastActivity,
-  genCaseSummary, findRedactions, maskRedactions, caseSig,
+  genCaseSummary, findRedactions, maskRedactions, caseSig, notesNewestFirst,
   EVENT_KINDS, eventDetailText, seedEvents,
   parseGroupMeText, parseGroupMeXlsx, parseGroupMeJson, latestKnownTs, compactOpportunities,
   ensureXLSX,
