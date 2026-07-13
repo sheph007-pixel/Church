@@ -2150,6 +2150,7 @@ function App() {
                 ? `${filtered.length} ${filtered.length === 1 ? 'result' : 'results'} across all opportunities`
                 : `${filtered.length} ${filtered.length === 1 ? 'opportunity' : 'opportunities'}`}
               q={q} setQ={setQ} onNew={() => setNewOpen(true)}
+              onRefreshAll={(list) => list.forEach((c, i) => setTimeout(() => ensureSummary(c, true), i * 150))}
               nav={nav} counts={counts}
               onNav={(n) => { setNav(n); setSelectedId(null); setQ(''); }}
               onImport={cases.length === 0 ? async (setSeedStatus) => {

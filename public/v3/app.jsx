@@ -190,10 +190,11 @@ function Sidebar3({ active, onNav, counts, onNew, me, adminUnlocked, versionLabe
 }
 
 // ─── Case list ──────────────────────────────────────────
-function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport, summaries, nav, onNav, counts }) {
+function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport, onRefreshAll, summaries, nav, onNav, counts }) {
   const [seedStatus, setSeedStatus] = React.useState('idle');
   const [sortKey, setSortKey] = React.useState('date');
   const [sortDir, setSortDir] = React.useState('desc');
+  const anyLoading = cases.some(c => summaries && summaries[c.id] && summaries[c.id].loading);
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -251,6 +252,11 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport, summ
             <input value={q} onChange={e => setQ(e.target.value)}
                    placeholder="Search all opportunities, notes, contacts…" />
           </div>
+          <Btn3 variant="secondary" icon="refresh" disabled={anyLoading}
+                onClick={() => onRefreshAll && onRefreshAll(cases)}
+                title="Force-refresh the AI summary for every opportunity shown below">
+            {anyLoading ? 'Refreshing…' : 'Refresh Summaries'}
+          </Btn3>
           <Btn3 variant="primary" icon="plus" onClick={onNew}>New Opportunity</Btn3>
         </div>
       </div>
