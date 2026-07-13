@@ -207,6 +207,8 @@ const EVENT_KINDS = {
   careteam_removed:{ label: 'removed from care team',icon: 'close' },
   note_added:      { label: 'added a note',        icon: 'note' },
   note_edited:     { label: 'edited a note',        icon: 'pencil' },
+  note_cleaned:    { label: 're-wrote a note',      icon: 'sparkle' },
+  note_cleanup_reverted: { label: 'reverted a note re-write', icon: 'refresh' },
   assignees_changed: { label: 'changed assigned deacons', icon: 'users' },
   task_added:      { label: 'added a task',        icon: 'plus' },
   task_completed:  { label: 'completed a task',    icon: 'check' },
@@ -240,6 +242,7 @@ function eventDetailText(e) {
     case 'careteam_removed': return d.name || '';
     case 'note_added':       return d.preview ? '"' + d.preview + (d.preview.length >= 80 ? '…' : '') + '"' : '';
     case 'note_edited':      return d.preview ? '"' + d.preview + (d.preview.length >= 80 ? '…' : '') + '"' : '';
+    case 'note_cleaned':     return d.preview ? '"' + d.preview + (d.preview.length >= 80 ? '…' : '') + '"' : '';
     case 'assignees_changed': return (d.ids || []).map(id => (typeof window !== 'undefined' && window.MEMBERS_BY_ID && window.MEMBERS_BY_ID[id] && window.MEMBERS_BY_ID[id].name) || id).join(', ') || 'cleared';
     case 'task_added':
     case 'task_completed':

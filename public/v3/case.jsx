@@ -30,9 +30,9 @@ function NoteItem3({ n, author, me, caseId, onEditNote, onCleanupNote, onRevertN
             </span>
           )}
           {wasCleaned && !editing && (
-            <span title="Rewritten by AI for grammar and clarity — same facts, same meaning"
+            <span title="Rewritten for grammar and clarity — same facts, same meaning"
                   style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, letterSpacing: '.03em', textTransform: 'uppercase', color: 'var(--ai)', background: 'var(--ai-soft)', borderRadius: 4, padding: '1px 6px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-              <Icon name="sparkle" size={9} stroke={2} /> AI cleaned
+              <Icon name="sparkle" size={9} stroke={2} /> Re-Written
               {mine && (
                 <button onClick={() => onRevertNote(caseId, n.id)}
                         style={{ background: 'none', border: 'none', padding: 0, marginLeft: 3, color: 'inherit', textTransform: 'none', fontWeight: 600, letterSpacing: 0, textDecoration: 'underline', cursor: 'pointer' }}>
@@ -44,7 +44,7 @@ function NoteItem3({ n, author, me, caseId, onEditNote, onCleanupNote, onRevertN
         </div>
         {mine && !editing && (
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
-            <button className="icon-btn" title="Clean up wording with AI — you can always revert"
+            <button className="icon-btn" title="Re-write for grammar and clarity — you can always revert"
                     disabled={cleaning} onClick={() => onCleanupNote(caseId, n.id)}>
               <Icon name="sparkle" size={13} stroke={1.7} className={cleaning ? 'spin' : ''} />
             </button>
