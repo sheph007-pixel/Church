@@ -150,6 +150,34 @@ ${notesText}`;
   } catch (e) { return null; }
 }
 
+// Rewrites a single note for grammar/clarity/organization only — same facts,
+// same meaning, nothing added or removed. The caller keeps the pre-cleanup
+// text so it can always be restored (see the "Revert" affordance on notes).
+async function cleanupNoteText(text) {
+  if (!text || !text.trim()) return null;
+  const prompt = `Rewrite the following note from a church benevolence case so it reads as clean, grammatically correct, well-organized prose — nothing more.
+
+STRICT RULES:
+- Do not add, remove, or change any fact, name, date, dollar amount, or detail. Every piece of information in the rewrite must also be in the original, and vice versa.
+- Do not add interpretation, opinions, or recommendations that aren't already there.
+- Fix grammar, spelling, punctuation, and run-on/fragmented sentences. Organize disjointed thoughts into clear sentences if helpful.
+- Keep the same tone and level of detail — this is a cleanup, not a summary. Don't shorten it.
+- Return ONLY the rewritten note text — no preamble, no quotes, no markdown.
+
+NOTE:
+${text}`;
+  try {
+    const resp = await fetch('/api/ai/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, model: 'claude-sonnet-5' }),
+    });
+    if (!resp.ok) return null;
+    const { result } = await resp.json();
+    return result ? result.trim() : null;
+  } catch (e) { return null; }
+}
+
 // Redacts an already-generated summary so the printed version is identical
 // in substance to the case-page summary — just with identifying details stripped.
 // Returns the exact substrings in a summary that identify the person/family,
@@ -454,7 +482,7 @@ function compactOpportunities(cases) {
 
 Object.assign(window, {
   TEAM, ME_ID, GROUPME_URL, STATUSES, CASES, fmt3, caseAuthors, caseLastActivity,
-  genCaseSummary, findRedactions, maskRedactions, caseSig, notesNewestFirst,
+  genCaseSummary, cleanupNoteText, findRedactions, maskRedactions, caseSig, notesNewestFirst,
   EVENT_KINDS, eventDetailText, seedEvents,
   parseGroupMeText, parseGroupMeXlsx, parseGroupMeJson, latestKnownTs, compactOpportunities,
   ensureXLSX,

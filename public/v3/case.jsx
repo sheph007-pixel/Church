@@ -2,11 +2,14 @@
 
 // A single note in the timeline. Only the note's author may edit it; an edit
 // marks it "edited" (with the change logged to history) and is shown inline.
-function NoteItem3({ n, author, me, caseId, onEditNote }) {
+// "Clean Up" rewrites the note for grammar/clarity only (same facts, same
+// meaning) via AI — the pre-cleanup text is kept so it can always be reverted.
+function NoteItem3({ n, author, me, caseId, onEditNote, onCleanupNote, onRevertNote, cleaning }) {
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(n.text);
   React.useEffect(() => { setDraft(n.text); setEditing(false); }, [n.id, n.text]);
   const mine = me && n.author === me.id;
+  const wasCleaned = n.originalText != null;
   return (
     <article className="note">
       <div className="note-head">
@@ -26,12 +29,30 @@ function NoteItem3({ n, author, me, caseId, onEditNote }) {
               <Icon name="download" size={9} stroke={2} /> from GroupMe sync
             </span>
           )}
+          {wasCleaned && !editing && (
+            <span title="Rewritten by AI for grammar and clarity — same facts, same meaning"
+                  style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, letterSpacing: '.03em', textTransform: 'uppercase', color: 'var(--ai)', background: 'var(--ai-soft)', borderRadius: 4, padding: '1px 6px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+              <Icon name="sparkle" size={9} stroke={2} /> AI cleaned
+              {mine && (
+                <button onClick={() => onRevertNote(caseId, n.id)}
+                        style={{ background: 'none', border: 'none', padding: 0, marginLeft: 3, color: 'inherit', textTransform: 'none', fontWeight: 600, letterSpacing: 0, textDecoration: 'underline', cursor: 'pointer' }}>
+                  revert
+                </button>
+              )}
+            </span>
+          )}
         </div>
         {mine && !editing && (
-          <button className="icon-btn" style={{ marginLeft: 'auto' }} title="Edit note"
-                  onClick={() => { setDraft(n.text); setEditing(true); }}>
-            <Icon name="pencil" size={13} stroke={1.7} />
-          </button>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
+            <button className="icon-btn" title="Clean up wording with AI — you can always revert"
+                    disabled={cleaning} onClick={() => onCleanupNote(caseId, n.id)}>
+              <Icon name="sparkle" size={13} stroke={1.7} className={cleaning ? 'spin' : ''} />
+            </button>
+            <button className="icon-btn" title="Edit note"
+                    onClick={() => { setDraft(n.text); setEditing(true); }}>
+              <Icon name="pencil" size={13} stroke={1.7} />
+            </button>
+          </div>
         )}
       </div>
       {editing ? (
@@ -50,7 +71,7 @@ function NoteItem3({ n, author, me, caseId, onEditNote }) {
   );
 }
 
-function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, onUpdate, onAddTask, onToggleTask, onDeleteTask, onSelectCase, onAddContact, onEditContact, onRemoveContact, onAddCareTeam, onEditCareTeam, onRemoveCareTeam, onSetAssignees, onShare, summaryEntry, onEnsureSummary, onRefreshSummary }) {
+function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, onCleanupNote, onRevertNote, cleaningNoteIds, onUpdate, onAddTask, onToggleTask, onDeleteTask, onSelectCase, onAddContact, onEditContact, onRemoveContact, onAddCareTeam, onEditCareTeam, onRemoveCareTeam, onSetAssignees, onShare, summaryEntry, onEnsureSummary, onRefreshSummary }) {
   const [noteText, setNoteText] = React.useState('');
   const [taskText, setTaskText] = React.useState('');
   const [taskDue, setTaskDue] = React.useState('');
@@ -283,7 +304,9 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
             {c.notes.length === 0 && <div className="empty-line">No notes yet.</div>}
             {notesNewestFirst(c.notes).map(n => {
               const a = team.find(t => t.id === n.author) || { name: 'Admin', initials: 'AD' };
-              return <NoteItem3 key={n.id} n={n} author={a} me={me} caseId={c.id} onEditNote={onEditNote} />;
+              return <NoteItem3 key={n.id} n={n} author={a} me={me} caseId={c.id} onEditNote={onEditNote}
+                                onCleanupNote={onCleanupNote} onRevertNote={onRevertNote}
+                                cleaning={!!(cleaningNoteIds && cleaningNoteIds[n.id])} />;
             })}
           </div>
         </section>

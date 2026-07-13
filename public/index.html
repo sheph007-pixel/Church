@@ -1881,6 +1881,38 @@ function App() {
     }));
     logEvent(cid, 'note_edited', { preview: next.slice(0, 80), prev: n0.text.slice(0, 80) });
   };
+  // AI "Clean Up" — rewrites a note for grammar/clarity only (same facts,
+  // same meaning). Author-only, same as editNote. The pre-cleanup text is
+  // kept as originalText so it can always be reverted; a second cleanup
+  // before reverting does NOT overwrite that snapshot, so Revert always
+  // goes back to what the deacon actually typed, however many times they
+  // re-run cleanup or manually edit in between.
+  const [cleaningNoteIds, setCleaningNoteIds] = React.useState({});
+  const cleanupNote = async (cid, noteId) => {
+    const c0 = cases.find(c => c.id === cid);
+    const n0 = c0 && c0.notes.find(n => n.id === noteId);
+    if (!n0 || n0.author !== meId) return;
+    setCleaningNoteIds(s => ({ ...s, [noteId]: true }));
+    const cleaned = await cleanupNoteText(n0.text);
+    setCleaningNoteIds(s => { const next = { ...s }; delete next[noteId]; return next; });
+    const next = cleaned && cleaned.trim();
+    if (!next || next === n0.text) return;
+    setCases(cs => cs.map(c => c.id !== cid ? c : {
+      ...c,
+      notes: c.notes.map(n => n.id !== noteId ? n : { ...n, text: next, originalText: n.originalText != null ? n.originalText : n.text }),
+    }));
+    logEvent(cid, 'note_cleaned', { preview: next.slice(0, 80) });
+  };
+  const revertNote = (cid, noteId) => {
+    const c0 = cases.find(c => c.id === cid);
+    const n0 = c0 && c0.notes.find(n => n.id === noteId);
+    if (!n0 || n0.author !== meId || n0.originalText == null) return;
+    setCases(cs => cs.map(c => c.id !== cid ? c : {
+      ...c,
+      notes: c.notes.map(n => n.id !== noteId ? n : { ...n, text: n.originalText, originalText: null }),
+    }));
+    logEvent(cid, 'note_cleanup_reverted', {});
+  };
   const updateCase = (cid, patch) => {
     const prev = cases.find(c => c.id === cid);
     const t = stamp();
@@ -2105,6 +2137,7 @@ function App() {
     const caseEvents = events.filter(e => e.caseId === selected.id);
     main = <CaseDetail3 c={selected} me={me} caseEvents={caseEvents} team={team} onBack={() => setSelectedId(null)}
             onAddNote={addNote} onEditNote={editNote} onUpdate={updateCase}
+            onCleanupNote={cleanupNote} onRevertNote={revertNote} cleaningNoteIds={cleaningNoteIds}
             onAddTask={addTask} onToggleTask={toggleTask} onDeleteTask={deleteTask}
             onAddContact={addContact} onEditContact={editContact} onRemoveContact={removeContact}
             onAddCareTeam={addCareTeam} onEditCareTeam={editCareTeam} onRemoveCareTeam={removeCareTeam}
