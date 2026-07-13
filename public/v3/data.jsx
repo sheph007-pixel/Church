@@ -102,13 +102,25 @@ async function genCaseSummary(c) {
   // guaranteed to be newest-first (see notesNewestFirst), and getting this
   // wrong mislabels the wrong note as MOST RECENT below.
   const ordered = c.notes.slice().sort((a, b) => new Date(a.date) - new Date(b.date)); // oldest → newest
-  const notesText = ordered
-    .map((n, i) => `[${fmt3.dateFull(n.date)}]${i === ordered.length - 1 ? ' (MOST RECENT)' : ''} ${n.text}`)
-    .join('\n\n');
   const now = new Date();
   const today = fmt3.dateFull(now.toISOString());
   const thirtyAgo = new Date(now.getTime() - 30 * 86400000);
   const thirtyAgoStr = fmt3.dateFull(thirtyAgo.toISOString());
+  // Split the "is this within the last 30 days" judgment out of the model and
+  // into exact code — asking the model to compare each note's date against a
+  // cutoff itself produced wrong "No updates" verdicts on cases that plainly
+  // had recent notes. Handing it two pre-split, labeled groups means it only
+  // has to notice which section has content, not do date arithmetic.
+  const cutoff = thirtyAgo.getTime();
+  const recent = ordered.filter(n => new Date(n.date).getTime() >= cutoff);
+  const older = ordered.filter(n => new Date(n.date).getTime() < cutoff);
+  const fmtNote = (n, tag) => `[${fmt3.dateFull(n.date)}]${tag ? ' (MOST RECENT)' : ''} ${n.text}`;
+  const recentText = recent.length
+    ? recent.map((n, i) => fmtNote(n, i === recent.length - 1)).join('\n\n')
+    : '(none)';
+  const olderText = older.length
+    ? older.map(n => fmtNote(n, false)).join('\n\n')
+    : '(none)';
   // DURABLE RULE: summaries never tally totals or focus on money spent — they're a
   // quick "where does this case stand" update, not a spend tracker. See STRICT RULES.
   const prompt = `You are writing two short blurbs about a church benevolence case, for a Diaconate member who is NOT involved in this case day-to-day — someone who only hears about it at the monthly meeting and needs to feel instantly caught up, with zero assumed prior context. Use ONLY the notes provided below — nothing else. Today's date is ${today}.
@@ -124,14 +136,17 @@ STRICT RULES:
 
 Write TWO separate blurbs:
 
-1. "context" — ${SUMMARY_LEN_NOTE}: the general, big-picture situation — who this is about, what kind of help they need, and why, drawn from the notes as a whole. This should read the same whether generated today or next month, so do NOT lead with or focus on the most recent note here — that belongs in "updates" below.
+1. "context" — ${SUMMARY_LEN_NOTE}: the general, big-picture situation — who this is about, what kind of help they need, and why, drawn from the notes as a whole (both sections below). This should read the same whether generated today or next month, so do NOT lead with or focus on the most recent note here — that belongs in "updates" below.
 
-2. "updates" — ${SUMMARY_LEN_NOTE}: what has happened or changed in roughly the last 30 days (since ${thirtyAgoStr}), anchored on the most recent notes. If none of the notes fall in that window, write exactly: "No updates in the last 30 days."
+2. "updates" — ${SUMMARY_LEN_NOTE}: based ONLY on the "NOTES FROM THE LAST 30 DAYS" section below — do not pull from "OLDER NOTES" for this blurb. If that section says "(none)", write exactly: "No updates in the last 30 days."
 
 Return ONLY valid JSON, no markdown code fences, no other text: {"context": "...", "updates": "..."}
 
-NOTES (oldest first; the last one is the most recent):
-${notesText}`;
+NOTES FROM THE LAST 30 DAYS (since ${thirtyAgoStr}; oldest first, last is most recent) — use these for "updates":
+${recentText}
+
+OLDER NOTES (background only — use for "context", not "updates"):
+${olderText}`;
   try {
     const resp = await fetch('/api/ai/complete', {
       method: 'POST',
