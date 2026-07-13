@@ -240,7 +240,11 @@ function caseSig(c) {
   // Note: status is intentionally NOT part of the signature — the summary text
   // doesn't reference status, and including it would make auto-archive trigger
   // needless summary regenerations.
-  return [(c.notes || []).length, (c.tasks || []).length,
+  // Today's date IS part of the signature: "updates" is phrased relative to a
+  // 30-day window and "today", so a summary generated yesterday is stale even
+  // if nothing on the case changed overnight — this forces same-day regen.
+  const today = new Date().toISOString().slice(0, 10);
+  return [today, (c.notes || []).length, (c.tasks || []).length,
           (c.tasks || []).filter(t => t.done).length, notesPart].join('/');
 }
 

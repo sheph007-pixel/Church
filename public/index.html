@@ -1630,19 +1630,32 @@ function App() {
 
   // Keep already-generated summaries automatically up to date: whenever an
   // opportunity's content changes (a deacon adds/edits a note, a GroupMe sync
-  // adds one, a task or status changes), regenerate its summary. Bounded to
-  // opportunities that already have a summary, and debounced so rapid edits
-  // collapse into one regeneration.
+  // adds one, a task or status changes) OR the calendar day rolls over
+  // (caseSig bakes in today's date — see data.jsx), regenerate its summary.
+  // Bounded to opportunities that already have a summary. Reads from
+  // casesRef so it doesn't need `cases` to re-render to know what's stale.
+  const sweepStaleSummaries = React.useCallback(() => {
+    casesRef.current.forEach(c => {
+      const cur = summariesRef.current[c.id];
+      if (cur && cur.context != null && !cur.loading && cur.sig !== caseSig(c)) ensureSummary(c);
+    });
+  }, [ensureSummary]);
+
+  // Debounced: fires ~1.2s after any case content change, so rapid edits
+  // collapse into one regeneration pass instead of one per keystroke/save.
   React.useEffect(() => {
     if (!signedIn) return;
-    const t = setTimeout(() => {
-      cases.forEach(c => {
-        const cur = summariesRef.current[c.id];
-        if (cur && cur.context != null && !cur.loading && cur.sig !== caseSig(c)) ensureSummary(c);
-      });
-    }, 1200);
+    const t = setTimeout(sweepStaleSummaries, 1200);
     return () => clearTimeout(t);
-  }, [cases, signedIn, ensureSummary]);
+  }, [cases, signedIn, sweepStaleSummaries]);
+
+  // Periodic: catches the "nothing changed, but a new day started" case for
+  // anyone who leaves a tab open — otherwise that only self-heals on reload.
+  React.useEffect(() => {
+    if (!signedIn) return;
+    const t = setInterval(sweepStaleSummaries, 30 * 60 * 1000);
+    return () => clearInterval(t);
+  }, [signedIn, sweepStaleSummaries]);
 
   // One-time refresh of EVERY summary to the latest prompt/style. Bumping the
   // cache key (ib_summaries_v8) clears the stale summaries; this pass then
