@@ -1,4 +1,4 @@
-// v3 tools — Report, Activity, Members admin, Print preview (AI-redacted)
+// v3 tools — Report, Activity, Members admin, Print preview
 
 // ─── Monthly report ─────────────────────────────────────
 function ReportView3({ cases, me, onSelect, onPrint }) {
@@ -54,28 +54,13 @@ function ReportView3({ cases, me, onSelect, onPrint }) {
   );
 }
 
-// Renders summary text with identifying spans blacked out — exact wording
-// preserved, only the sensitive substrings replaced by redaction boxes.
-function RedactedSummary({ text, redactions }) {
-  const segs = maskRedactions(text, redactions);
-  return (
-    <>
-      {segs.map((s, i) => s.redact
-        ? <span key={i} className="redact-box"
-                style={{ width: Math.min(150, Math.max(22, s.t.length * 7)) + 'px' }}
-                aria-label="redacted" />
-        : <React.Fragment key={i}>{s.t}</React.Fragment>)}
-    </>
-  );
-}
-
-// ─── Monthly report — redacted print preview ─────────────
-// Same summary shown on each case page, with names/identifying details
-// stripped. On screen you can Reveal real names; printing is ALWAYS redacted
-// (enforced by print-only CSS), so a printout left on a table is safe.
-function PrintPreview3({ cases, summaries, onEnsureSummary }) {
-  const [reveal, setReveal] = React.useState(false);
+// ─── Monthly report ───────────────────────────────────────
+// Same summary shown on each case page. Any deacon can view this report;
+// only the Team Leader can print it (that's the safety boundary now, in
+// place of the old on-screen redaction).
+function PrintPreview3({ cases, summaries, onEnsureSummary, me }) {
   const active = cases.filter(c => c.status === 'active');
+  const canPrint = !!(me && me.isLeader);
 
   // Ensure every active opportunity has a stored summary (generates any that are
   // missing/stale). Uses the SAME shared summaries shown on each opportunity page.
@@ -83,30 +68,22 @@ function PrintPreview3({ cases, summaries, onEnsureSummary }) {
     active.forEach(c => onEnsureSummary && onEnsureSummary(c));
   }, [cases]);
 
-  const Bar = ({ w = 56 }) => (
-    <span className="name-bar" style={{
-      display: 'inline-block', verticalAlign: '-2px', height: 11, width: w,
-      background: '#0f2447', borderRadius: 2, margin: '0 1px',
-      WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
-    }} />
-  );
-
   return (
     <div className="tool-view print-wrap">
       <div className="tool-head">
         <div>
           <h1 className="page-title">Monthly Report</h1>
-          <div className="page-sub">For the deacon meeting · printout is always redacted — safe to leave on a table</div>
+          <div className="page-sub">For the deacon meeting · only the Team Leader can print</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <Btn3 variant="secondary" icon={reveal ? 'eyeOff' : 'eye'} onClick={() => setReveal(v => !v)}>
-            {reveal ? 'Hide Names' : 'Reveal (Screen Only)'}
+          <Btn3 variant="primary" icon="print" onClick={() => window.print()} disabled={!canPrint}
+                title={canPrint ? undefined : 'Only the Team Leader can print this report'}>
+            Print
           </Btn3>
-          <Btn3 variant="primary" icon="print" onClick={() => window.print()}>Print</Btn3>
         </div>
       </div>
 
-      <div className={'paper' + (reveal ? ' paper-reveal' : '')}>
+      <div className="paper">
         <header className="paper-head">
           <div className="paper-brand">
             <div>
@@ -120,7 +97,7 @@ function PrintPreview3({ cases, summaries, onEnsureSummary }) {
         </header>
 
         <p className="paper-lead">
-          <strong>{active.length} active opportunities.</strong> A redacted summary of each follows below.
+          <strong>{active.length} active opportunities.</strong> A summary of each follows below.
         </p>
 
         <section>
@@ -135,25 +112,19 @@ function PrintPreview3({ cases, summaries, onEnsureSummary }) {
                   <span className="paper-case-num">{c.caseNumber}</span>
                 </div>
                 <div className="paper-item-line">
-                  <strong>Opportunity:</strong>{' '}
-                  <span className="reveal-only">{c.name}</span>
-                  <span className="redact-only"><Bar w={Math.min(140, 50 + c.name.length * 6)} /></span>
+                  <strong>Opportunity:</strong> {c.name}
                 </div>
                 {loading ? (
                   <div className="paper-item-line paper-summary">
-                    <em className="paper-loading">Helper is summarizing and redacting…</em>
+                    <em className="paper-loading">Helper is summarizing…</em>
                   </div>
                 ) : hasAny ? (
                   <>
                     <div className="paper-item-line paper-summary">
-                      <strong>Summary:</strong>{' '}
-                      <span className="reveal-only">{entry.context}</span>
-                      <span className="redact-only"><RedactedSummary text={entry.context} redactions={entry.redactions} /></span>
+                      <strong>Summary:</strong> {entry.context}
                     </div>
                     <div className="paper-item-line paper-summary">
-                      <strong>Updates (30 days):</strong>{' '}
-                      <span className="reveal-only">{entry.updates}</span>
-                      <span className="redact-only"><RedactedSummary text={entry.updates} redactions={entry.redactions} /></span>
+                      <strong>Updates (30 days):</strong> {entry.updates}
                     </div>
                   </>
                 ) : (
@@ -162,7 +133,7 @@ function PrintPreview3({ cases, summaries, onEnsureSummary }) {
               </div>
             );
           })}
-          <div className="paper-foot">End of report · {active.length} active opportunities · this printout is redacted and safe to leave on a table.</div>
+          <div className="paper-foot">End of report · {active.length} active opportunities.</div>
         </section>
       </div>
     </div>

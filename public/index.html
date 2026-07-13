@@ -1035,16 +1035,6 @@
   .paper-status { font-size: 11px; padding: 2px 7px; background: var(--primary-soft); color: var(--primary); border-radius: 99px; font-weight: 600; }
   .paper-item-line { font-size: 13.5px; margin-bottom: 4px; }
   .paper-summary { line-height: 1.6; color: #2a2a2a; }
-  .redact-box {
-    display: inline-block; vertical-align: -2px;
-    height: 13px; background: #0f2447; border-radius: 2px;
-    margin: 0 1px;
-    -webkit-print-color-adjust: exact; print-color-adjust: exact;
-  }
-  /* Name/summary masking. Default = redacted. Reveal shows real text ON SCREEN only. */
-  .reveal-only { display: none; }
-  .paper-reveal .reveal-only { display: inline; }
-  .paper-reveal .redact-only { display: none; }
   .paper-loading { color: var(--text-faint); }
   .paper-foot {
     margin-top: 36px; padding-top: 14px;
@@ -1274,14 +1264,6 @@
     .main { height: auto !important; overflow: visible !important; }
     .tool-view, .print-wrap { height: auto !important; overflow: visible !important; max-width: none !important; padding: 0 !important; }
     .paper { box-shadow: none; border: none; padding: 0; max-width: none; }
-    /* Printing is ALWAYS redacted, even if names are revealed on screen. */
-    .reveal-only { display: none !important; }
-    .redact-only { display: inline !important; }
-    /* Force redaction boxes (and name bars) to actually print as solid bars. */
-    .redact-box, .name-bar {
-      -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
-      background: #0f2447 !important;
-    }
   }
 
   /* ─── Mobile bottom nav (tablet 769-900px only) ─────── */
@@ -1562,11 +1544,11 @@ function App() {
   }, []);
 
   // ── System-generated summaries ───────────────────────
-  // Stored statically per case: { context, updates, redactions, at, sig, loading }.
+  // Stored statically per case: { context, updates, at, sig, loading }.
   // context = stable who/what/why; updates = what's changed in the last 30 days.
   // Regenerated only when a note/task changes (sig change) or manual refresh.
   // Persisted so they survive reloads — the same summary shows on the case
-  // page and the (redacted) Monthly Report.
+  // page and the Monthly Report.
   const [summaries, setSummaries] = React.useState(() => {
     try { return JSON.parse(localStorage.getItem('ib_summaries_v8') || '{}'); } catch (e) { return {}; }
   });
@@ -1586,18 +1568,17 @@ function App() {
     }, ...es]);
   }, [meId]);
 
-  // Generate (or regenerate) a case's context+updates blurbs and their shared
-  // redaction list, then store all of it with a timestamp. Logs to history
-  // when it's a real regeneration (manual refresh, or content changed) — not
-  // the first lazy fill.
+  // Generate (or regenerate) a case's context+updates blurbs, then store them
+  // with a timestamp. Logs to history when it's a real regeneration (manual
+  // refresh, or content changed) — not the first lazy fill.
   const ensureSummary = React.useCallback((c, force = false) => {
     const cur = summariesRef.current[c.id];
     const sig = caseSig(c);
     if (!force) {
       if (c.notes.length === 0) return;
       if (cur && cur.loading) return;
-      // Up to date only if both blurbs AND a redaction list are present.
-      if (cur && cur.sig === sig && cur.context != null && cur.updates != null && cur.redactions != null) return;
+      // Up to date only if both blurbs are present.
+      if (cur && cur.sig === sig && cur.context != null && cur.updates != null) return;
     }
     const hadPrior = !!(cur && cur.context != null);
     const changed = hadPrior && cur.sig !== sig;
@@ -1607,22 +1588,9 @@ function App() {
       const context = gen ? gen.context : null;
       const updates = gen ? gen.updates : null;
       const combined = [context, updates].filter(Boolean).join('\n\n');
-      let redactions = combined ? await findRedactions(combined) : [];
-      // Belt-and-suspenders: always mask the names we already know for this case
-      // (contacts + the case display name), so a missed name never prints.
-      if (combined) {
-        const known = [];
-        (c.contacts || []).forEach(p => {
-          if (p.name) { known.push(p.name); p.name.split(/\s+/).forEach(w => known.push(w)); }
-        });
-        if (c.name) c.name.split(/\s+/).forEach(w => known.push(w));
-        const generic = /^(family|household|the|and|&|mr|mrs|ms|dr|jr|sr|&amp;)$/i;
-        const knownClean = known.filter(w => w && w.replace(/[^a-z]/gi, '').length >= 2 && !generic.test(w.replace(/[^a-z]/gi, '')));
-        redactions = [...new Set([...(redactions || []), ...knownClean])];
-      }
       setSummaries(s => ({
         ...s,
-        [c.id]: { context, updates, redactions, at: new Date().toISOString(), sig, loading: false },
+        [c.id]: { context, updates, at: new Date().toISOString(), sig, loading: false },
       }));
       if (combined && (force || changed)) logEvent(c.id, 'summary_generated', { manual: !!force });
     })();
@@ -2144,7 +2112,7 @@ function App() {
 
   const selected = selectedId ? cases.find(c => c.id === selectedId) : null;
 
-  const ADMIN_NAVS = ['members', 'activity', 'report', 'sync'];
+  const ADMIN_NAVS = ['members', 'activity', 'sync'];
   let main;
   if (selected) {
     const caseEvents = events.filter(e => e.caseId === selected.id);
@@ -2164,7 +2132,7 @@ function App() {
     main = <AdminGate onUnlock={() => { sessionStorage.setItem('ib_admin_unlocked', '1'); setAdminUnlocked(true); }}
                       onCancel={() => setNav('active')} />;
   } else if (nav === 'report') {
-    main = <PrintPreview3 cases={cases} summaries={summaries} onEnsureSummary={ensureSummary} />;
+    main = <PrintPreview3 cases={cases} summaries={summaries} onEnsureSummary={ensureSummary} me={me} />;
   } else if (nav === 'activity') {
     main = <ActivityView3 events={events} cases={cases} team={team} onSelectCase={setSelectedId} />;
   } else if (nav === 'members') {

@@ -81,10 +81,10 @@ const AssigneeBadges = ({ ids }) => {
   );
 };
 
-const Btn3 = ({ variant = 'secondary', icon, children, onClick, size = 'md', disabled, fullWidth, type, style }) => {
+const Btn3 = ({ variant = 'secondary', icon, children, onClick, size = 'md', disabled, fullWidth, type, style, title }) => {
   const cls = 'btn btn-' + variant + ' btn-' + size + (fullWidth ? ' btn-full' : '');
   return (
-    <button type={type} onClick={onClick} disabled={disabled} className={cls} style={style}>
+    <button type={type} onClick={onClick} disabled={disabled} className={cls} style={style} title={title}>
       {icon && <Icon name={icon} size={size === 'sm' ? 13 : 15} stroke={1.8} />}
       {children}
     </button>
@@ -100,7 +100,6 @@ function Sidebar3({ active, onNav, counts, onNew, me, adminUnlocked, versionLabe
   ];
   const tools = [
     { id: 'activity', icon: 'history', label: 'Activity Log' },
-    { id: 'report',   icon: 'print',   label: 'Monthly Report' },
     { id: 'sync',     icon: 'download', label: 'GroupMe Sync' },
   ];
   return (
@@ -139,6 +138,12 @@ function Sidebar3({ active, onNav, counts, onNew, me, adminUnlocked, versionLabe
             <span className="nav-count">{it.count}</span>
           </button>
         ))}
+        <div className="nav-label">Reports</div>
+        <button onClick={() => onNav('report')} title="Monthly Report"
+          className={'nav-item' + (active === 'report' ? ' active' : '')}>
+          <Icon name="print" size={16} stroke={1.7} />
+          <span>Monthly Report</span>
+        </button>
         <div className="nav-label">Admin {!adminUnlocked && <Icon name="lock" size={10} stroke={2} />}</div>
         <button onClick={() => onNav('members')} title="Deacons"
           className={'nav-item' + (active === 'members' ? ' active' : '')}>

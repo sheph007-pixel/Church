@@ -440,7 +440,7 @@ function NewCase3({ onClose, onCreate, me }) {
             <label>Opportunity Name</label>
             <input autoFocus value={name} onChange={e => setName(e.target.value)}
                    placeholder='"Alvarez Family", "Grace O.", anything internal' />
-            <div className="form-hint">Only deacons see this name. Printed reports always redact it.</div>
+            <div className="form-hint">Only deacons see this name. It appears in full on the Monthly Report; only the Team Leader can print it.</div>
           </div>
           <div className="form-row">
             <label>First Note <span className="optional">(optional)</span></label>

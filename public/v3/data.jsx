@@ -178,60 +178,6 @@ ${text}`;
   } catch (e) { return null; }
 }
 
-// Redacts an already-generated summary so the printed version is identical
-// in substance to the case-page summary — just with identifying details stripped.
-// Returns the exact substrings in a summary that identify the person/family,
-// so the app can black them out while leaving every other word verbatim.
-async function findRedactions(summary) {
-  if (!summary) return [];
-  const prompt = `From the church benevolence case summary below, list EVERY span of text that could identify the specific person(s) or family it's about — so it can be blacked out on a printout left on a table.
-
-Include:
-- People's names (first, last, or full — list each as it appears)
-- Named providers (hospitals, clinics, utilities, employers, schools, churches, programs)
-- Specific places, streets, or neighborhoods
-
-Do NOT include: dollar amounts, dates, or generic phrases that don't identify anyone (e.g. "the family", "her job", "their child", "night shift").
-
-Return a JSON array of the exact substrings to redact, copied VERBATIM from the summary (same case and spelling). Return [] if nothing needs redacting.
-
-SUMMARY:
-${summary}`;
-  try {
-    const resp = await fetch('/api/ai/complete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
-    });
-    if (!resp.ok) return [];
-    const { result } = await resp.json();
-    if (!result) return [];
-    const cleaned = result.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
-    const arr = JSON.parse(cleaned);
-    return Array.isArray(arr) ? arr.filter(s => typeof s === 'string' && s.trim()) : [];
-  } catch (e) { return []; }
-}
-
-// Splits text into segments, marking the spans that should be blacked out.
-// Guarantees the visible (non-redacted) text is verbatim from the original.
-function maskRedactions(text, phrases) {
-  if (!text) return [];
-  const list = [...new Set((phrases || []).filter(Boolean))].sort((a, b) => b.length - a.length);
-  if (!list.length) return [{ t: text }];
-  const esc = list.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  const re = new RegExp('(' + esc.join('|') + ')', 'g');
-  const segments = [];
-  let last = 0, m;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > last) segments.push({ t: text.slice(last, m.index) });
-    segments.push({ t: m[0], redact: true });
-    last = m.index + m[0].length;
-    if (re.lastIndex === m.index) re.lastIndex++;
-  }
-  if (last < text.length) segments.push({ t: text.slice(last) });
-  return segments;
-}
-
 // Signature of the content a summary depends on. Changes when a note is
 // added/edited/removed or a task is added/completed — which is what triggers
 // an automatic regeneration so summaries stay current.
@@ -486,7 +432,7 @@ function compactOpportunities(cases) {
 
 Object.assign(window, {
   TEAM, ME_ID, GROUPME_URL, STATUSES, CASES, fmt3, caseAuthors, caseLastActivity,
-  genCaseSummary, cleanupNoteText, findRedactions, maskRedactions, caseSig, notesNewestFirst,
+  genCaseSummary, cleanupNoteText, caseSig, notesNewestFirst,
   EVENT_KINDS, eventDetailText, seedEvents,
   parseGroupMeText, parseGroupMeXlsx, parseGroupMeJson, latestKnownTs, compactOpportunities,
   ensureXLSX,
