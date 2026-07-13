@@ -428,6 +428,14 @@
     margin: 0; font-size: 14.5px; line-height: 1.55; color: #2a1c4a;
   }
   .ai-fallback { color: var(--text-muted); font-style: italic; }
+  .ai-section + .ai-section {
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(109,40,217,0.14);
+  }
+  .ai-section-label {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.4px;
+    text-transform: uppercase; color: var(--ai); opacity: 0.75; margin-bottom: 3px;
+  }
+  .ai-section-sub { font-weight: 500; text-transform: none; opacity: 0.75; margin-left: 4px; }
   .ai-foot {
     font-size: 11px; color: var(--ai); opacity: 0.65;
     margin-top: 8px;
@@ -1554,15 +1562,16 @@ function App() {
   }, []);
 
   // ── System-generated summaries ───────────────────────
-  // Stored statically per case: { text, redacted, at, sig, loading }.
+  // Stored statically per case: { context, updates, redactions, at, sig, loading }.
+  // context = stable who/what/why; updates = what's changed in the last 30 days.
   // Regenerated only when a note/task changes (sig change) or manual refresh.
   // Persisted so they survive reloads — the same summary shows on the case
   // page and the (redacted) Monthly Report.
   const [summaries, setSummaries] = React.useState(() => {
-    try { return JSON.parse(localStorage.getItem('ib_summaries_v7') || '{}'); } catch (e) { return {}; }
+    try { return JSON.parse(localStorage.getItem('ib_summaries_v8') || '{}'); } catch (e) { return {}; }
   });
   React.useEffect(() => {
-    localStorage.setItem('ib_summaries_v7', JSON.stringify(summaries));
+    localStorage.setItem('ib_summaries_v8', JSON.stringify(summaries));
   }, [summaries]);
   const summariesRef = React.useRef(summaries);
   React.useEffect(() => { summariesRef.current = summaries; }, [summaries]);
@@ -1577,27 +1586,31 @@ function App() {
     }, ...es]);
   }, [meId]);
 
-  // Generate (or regenerate) a case's summary + its redacted twin, then store
-  // both with a timestamp. Logs to history when it's a real regeneration
-  // (manual refresh, or content changed) — not the first lazy fill.
+  // Generate (or regenerate) a case's context+updates blurbs and their shared
+  // redaction list, then store all of it with a timestamp. Logs to history
+  // when it's a real regeneration (manual refresh, or content changed) — not
+  // the first lazy fill.
   const ensureSummary = React.useCallback((c, force = false) => {
     const cur = summariesRef.current[c.id];
     const sig = caseSig(c);
     if (!force) {
       if (c.notes.length === 0) return;
       if (cur && cur.loading) return;
-      // Up to date only if text AND a redaction list are both present.
-      if (cur && cur.sig === sig && cur.text != null && cur.redactions != null) return;
+      // Up to date only if both blurbs AND a redaction list are present.
+      if (cur && cur.sig === sig && cur.context != null && cur.updates != null && cur.redactions != null) return;
     }
-    const hadPrior = !!(cur && cur.text != null);
+    const hadPrior = !!(cur && cur.context != null);
     const changed = hadPrior && cur.sig !== sig;
     setSummaries(s => ({ ...s, [c.id]: { ...(s[c.id] || {}), loading: true } }));
     (async () => {
-      const text = await genCaseSummary(c);
-      let redactions = text ? await findRedactions(text) : [];
+      const gen = await genCaseSummary(c);
+      const context = gen ? gen.context : null;
+      const updates = gen ? gen.updates : null;
+      const combined = [context, updates].filter(Boolean).join('\n\n');
+      let redactions = combined ? await findRedactions(combined) : [];
       // Belt-and-suspenders: always mask the names we already know for this case
       // (contacts + the case display name), so a missed name never prints.
-      if (text) {
+      if (combined) {
         const known = [];
         (c.contacts || []).forEach(p => {
           if (p.name) { known.push(p.name); p.name.split(/\s+/).forEach(w => known.push(w)); }
@@ -1609,9 +1622,9 @@ function App() {
       }
       setSummaries(s => ({
         ...s,
-        [c.id]: { text, redactions, at: new Date().toISOString(), sig, loading: false },
+        [c.id]: { context, updates, redactions, at: new Date().toISOString(), sig, loading: false },
       }));
-      if (text && (force || changed)) logEvent(c.id, 'summary_generated', { manual: !!force });
+      if (combined && (force || changed)) logEvent(c.id, 'summary_generated', { manual: !!force });
     })();
   }, [logEvent]);
 
@@ -1625,18 +1638,18 @@ function App() {
     const t = setTimeout(() => {
       cases.forEach(c => {
         const cur = summariesRef.current[c.id];
-        if (cur && cur.text != null && !cur.loading && cur.sig !== caseSig(c)) ensureSummary(c);
+        if (cur && cur.context != null && !cur.loading && cur.sig !== caseSig(c)) ensureSummary(c);
       });
     }, 1200);
     return () => clearTimeout(t);
   }, [cases, signedIn, ensureSummary]);
 
   // One-time refresh of EVERY summary to the latest prompt/style. Bumping the
-  // cache key (ib_summaries_v7) clears the stale summaries; this pass then
-  // proactively regenerates a fresh, concise summary for every opportunity so the
-  // case pages and the Monthly Report are all on the new format — not just the
-  // ones someone happens to open. ensureSummary is idempotent (skips anything
-  // already up to date), so this is cheap on later loads.
+  // cache key (ib_summaries_v8) clears the stale summaries; this pass then
+  // proactively regenerates a fresh context+updates pair for every opportunity
+  // so the case pages and the Monthly Report are all on the new format — not
+  // just the ones someone happens to open. ensureSummary is idempotent (skips
+  // anything already up to date), so this is cheap on later loads.
   const didRegenAll = React.useRef(false);
   React.useEffect(() => {
     if (!signedIn || dbLoading || didRegenAll.current || !cases.length) return;

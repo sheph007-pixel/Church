@@ -284,7 +284,7 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport, summ
             // Preview the system-generated summary (the quick "where it stands" read);
             // fall back to the latest note until a summary has been generated.
             const sum = summaries && summaries[c.id];
-            const preview = (sum && sum.text) || (latest ? latest.text : 'No notes yet');
+            const preview = (sum && (sum.updates || sum.context)) || (latest ? latest.text : 'No notes yet');
             const days = Math.max(0, Math.floor((Date.now() - new Date(caseLastActivity(c)).getTime()) / 86400000));
             return (
               <button key={c.id} onClick={() => onSelect(c.id)} className="row">
@@ -328,11 +328,13 @@ function AiSummaryCard({ c, entry, onEnsure, onRefresh }) {
   const sig = caseSig(c);
   React.useEffect(() => { if (onEnsure) onEnsure(c); }, [c.id, sig]);
 
-  const text = entry && entry.text;
+  const context = entry && entry.context;
+  const updates = entry && entry.updates;
+  const hasAny = !!(context || updates);
   const at = entry && entry.at;
   const loading = !!(entry && entry.loading);
-  const firstLoad = loading && !text;
-  const refreshing = loading && !!text;
+  const firstLoad = loading && !hasAny;
+  const refreshing = loading && hasAny;
 
   if (c.notes.length === 0) {
     return (
@@ -357,12 +359,21 @@ function AiSummaryCard({ c, entry, onEnsure, onRefresh }) {
         <div className="ai-loading">
           <span className="dot" /><span className="dot" /><span className="dot" />
         </div>
-      ) : text ? (
-        <p className="ai-body">{text}</p>
+      ) : hasAny ? (
+        <>
+          <div className="ai-section">
+            <div className="ai-section-label">Quick Summary</div>
+            <p className="ai-body">{context || 'Summary unavailable.'}</p>
+          </div>
+          <div className="ai-section">
+            <div className="ai-section-label">Updates <span className="ai-section-sub">Last 30 days</span></div>
+            <p className="ai-body">{updates || 'No updates in the last 30 days.'}</p>
+          </div>
+        </>
       ) : (
         <p className="ai-body ai-fallback">Summary unavailable. Read notes below.</p>
       )}
-      {text && at && (
+      {hasAny && at && (
         <div className="ai-foot">
           {refreshing ? 'Updating…' : `Generated ${fmt3.dateTime(at)}`}
         </div>

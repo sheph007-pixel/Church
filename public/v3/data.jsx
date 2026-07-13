@@ -88,8 +88,14 @@ function caseAuthors(c) {
 // so they stay STATIC until a note/task changes or someone hits refresh.
 // These helpers do no caching — the app owns the cache + persistence.
 
-const SUMMARY_LEN_NOTE = 'one or two sentences, roughly 25-40 words total';
+const SUMMARY_LEN_NOTE = 'one or two sentences, roughly 20-35 words';
 
+// Generates two short, independent blurbs from a case's notes:
+// - context: the stable, big-picture "who/what/why" — reads the same whether
+//   generated today or next month.
+// - updates: what's changed in roughly the last 30 days, anchored on the
+//   most recent notes.
+// Both are shown together on the case page and the Monthly Report.
 async function genCaseSummary(c) {
   if (c.notes.length === 0) return null;
   // Sort directly by date rather than assuming storage order — notes[] isn't
@@ -99,23 +105,33 @@ async function genCaseSummary(c) {
   const notesText = ordered
     .map((n, i) => `[${fmt3.dateFull(n.date)}]${i === ordered.length - 1 ? ' (MOST RECENT)' : ''} ${n.text}`)
     .join('\n\n');
+  const now = new Date();
+  const today = fmt3.dateFull(now.toISOString());
+  const thirtyAgo = new Date(now.getTime() - 30 * 86400000);
+  const thirtyAgoStr = fmt3.dateFull(thirtyAgo.toISOString());
   // DURABLE RULE: summaries never tally totals or focus on money spent — they're a
   // quick "where does this case stand" update, not a spend tracker. See STRICT RULES.
-  const prompt = `You are writing a brief status update on a church benevolence record for a Diaconate member who is NOT involved in this case day-to-day — someone who only hears about it at the monthly meeting and needs to feel instantly caught up, with zero assumed prior context. Use ONLY the notes provided below — nothing else.
+  const prompt = `You are writing two short blurbs about a church benevolence case, for a Diaconate member who is NOT involved in this case day-to-day — someone who only hears about it at the monthly meeting and needs to feel instantly caught up, with zero assumed prior context. Use ONLY the notes provided below — nothing else. Today's date is ${today}.
 
 STRICT RULES:
 - Base every statement strictly on the notes below. If the notes don't say it, don't write it. If you're not confident something is directly stated, leave it out rather than guess.
 - Do not guess, infer beyond what is written, or add any outside facts, assumptions, or recommendations.
 - Do not use outside knowledge about any person, place, employer, or organization.
 - Do not mention deacons, staff, or care-team members by name, or reference who wrote the notes.
-- Do NOT add up, total, or tally money. Never state a cumulative or "total" amount given, and never frame the update around how much has been spent helping this person. A specific recent dollar amount may be mentioned only if it's genuinely part of where the case stands now — but the summary centers on the situation, not the dollars.
-- Weight the MOST RECENT notes most heavily. Anchor the summary on the latest update and the current status; use older notes only as brief context, and don't lead with or dwell on old history that newer notes have already moved past.
+- Do NOT add up, total, or tally money. Never state a cumulative or "total" amount given, and never frame either blurb around how much has been spent helping this person. A specific recent dollar amount may be mentioned only if it's genuinely part of where things stand — but the focus stays on the situation, not the dollars.
 - Avoid internal shorthand, acronyms, or anything that assumes the reader already knows the background — write for someone hearing about this case for the first time.
+- Plain, clear language, no jargon. No greetings or preamble; don't begin either blurb with "This case" or "The case" — just describe the situation.
+
+Write TWO separate blurbs:
+
+1. "context" — ${SUMMARY_LEN_NOTE}: the general, big-picture situation — who this is about, what kind of help they need, and why, drawn from the notes as a whole. This should read the same whether generated today or next month, so do NOT lead with or focus on the most recent note here — that belongs in "updates" below.
+
+2. "updates" — ${SUMMARY_LEN_NOTE}: what has happened or changed in roughly the last 30 days (since ${thirtyAgoStr}), anchored on the most recent notes. If none of the notes fall in that window, write exactly: "No updates in the last 30 days."
+
+Return ONLY valid JSON, no markdown code fences, no other text: {"context": "...", "updates": "..."}
 
 NOTES (oldest first; the last one is the most recent):
-${notesText}
-
-Write ${SUMMARY_LEN_NOTE}: lead with the most recent development and where things stand right now, adding only enough earlier context to make it make sense to someone hearing about this case for the first time. Lead with the situation, not money. Plain, clear language, no jargon. No greetings or preamble; don't begin with "This case" or "The case" — just describe the situation.`;
+${notesText}`;
   try {
     const resp = await fetch('/api/ai/complete', {
       method: 'POST',
@@ -124,7 +140,13 @@ Write ${SUMMARY_LEN_NOTE}: lead with the most recent development and where thing
     });
     if (!resp.ok) return null;
     const { result } = await resp.json();
-    return result ? result.trim() : null;
+    if (!result) return null;
+    const cleaned = result.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+    const parsed = JSON.parse(cleaned);
+    const context = typeof parsed.context === 'string' ? parsed.context.trim() : '';
+    const updates = typeof parsed.updates === 'string' ? parsed.updates.trim() : '';
+    if (!context && !updates) return null;
+    return { context, updates };
   } catch (e) { return null; }
 }
 

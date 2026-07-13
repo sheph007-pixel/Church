@@ -127,7 +127,8 @@ function PrintPreview3({ cases, summaries, onEnsureSummary }) {
           <h3 className="paper-h">Active Opportunities</h3>
           {active.map((c) => {
             const entry = (summaries && summaries[c.id]) || {};
-            const loading = entry.loading && entry.text == null;
+            const hasAny = entry.context != null || entry.updates != null;
+            const loading = entry.loading && !hasAny;
             return (
               <div key={c.id} className="paper-item">
                 <div className="paper-item-head">
@@ -138,17 +139,26 @@ function PrintPreview3({ cases, summaries, onEnsureSummary }) {
                   <span className="reveal-only">{c.name}</span>
                   <span className="redact-only"><Bar w={Math.min(140, 50 + c.name.length * 6)} /></span>
                 </div>
-                <div className="paper-item-line paper-summary">
-                  <strong>Summary:</strong>{' '}
-                  {loading
-                    ? <em className="paper-loading">Helper is summarizing and redacting…</em>
-                    : entry.text
-                      ? <>
-                          <span className="reveal-only">{entry.text}</span>
-                          <span className="redact-only"><RedactedSummary text={entry.text} redactions={entry.redactions} /></span>
-                        </>
-                      : 'No notes yet.'}
-                </div>
+                {loading ? (
+                  <div className="paper-item-line paper-summary">
+                    <em className="paper-loading">Helper is summarizing and redacting…</em>
+                  </div>
+                ) : hasAny ? (
+                  <>
+                    <div className="paper-item-line paper-summary">
+                      <strong>Summary:</strong>{' '}
+                      <span className="reveal-only">{entry.context}</span>
+                      <span className="redact-only"><RedactedSummary text={entry.context} redactions={entry.redactions} /></span>
+                    </div>
+                    <div className="paper-item-line paper-summary">
+                      <strong>Updates (30 days):</strong>{' '}
+                      <span className="reveal-only">{entry.updates}</span>
+                      <span className="redact-only"><RedactedSummary text={entry.updates} redactions={entry.redactions} /></span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="paper-item-line paper-summary">No notes yet.</div>
+                )}
               </div>
             );
           })}
