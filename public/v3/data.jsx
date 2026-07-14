@@ -147,22 +147,48 @@ ${recentText}
 
 OLDER NOTES (background only — use for "context", not "updates"):
 ${olderText}`;
-  try {
-    const resp = await fetch('/api/ai/complete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, model: 'claude-sonnet-5' }),
-    });
-    if (!resp.ok) return null;
-    const { result } = await resp.json();
-    if (!result) return null;
-    const cleaned = result.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
-    const parsed = JSON.parse(cleaned);
-    const context = typeof parsed.context === 'string' ? parsed.context.trim() : '';
-    const updates = typeof parsed.updates === 'string' ? parsed.updates.trim() : '';
-    if (!context && !updates) return null;
-    return { context, updates };
-  } catch (e) { return null; }
+
+  const callOnce = async () => {
+    try {
+      const resp = await fetch('/api/ai/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, model: 'claude-sonnet-5' }),
+      });
+      if (!resp.ok) return null;
+      const { result } = await resp.json();
+      if (!result) return null;
+      const cleaned = result.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+      const parsed = JSON.parse(cleaned);
+      return {
+        context: typeof parsed.context === 'string' ? parsed.context.trim() : '',
+        updates: typeof parsed.updates === 'string' ? parsed.updates.trim() : '',
+      };
+    } catch (e) { return null; }
+  };
+
+  let out = await callOnce();
+  if (!out) return null;
+
+  // The model occasionally ignores the split above and claims "No updates"
+  // even when the "last 30 days" section plainly has content — non-determinism,
+  // not a data problem, since the same case can flip between correct and wrong
+  // on repeated refreshes. Since recent.length is a fact we computed in code
+  // (not something the model can get wrong), never let a false "No updates"
+  // survive: retry once, and if it still won't cooperate, fall back to the
+  // most recent note's own text — always accurate even if less polished.
+  const claimsNoUpdates = (text) => !text || /no updates?\s+in the last 30 days/i.test(text);
+  if (recent.length > 0 && claimsNoUpdates(out.updates)) {
+    const retry = await callOnce();
+    if (retry && !claimsNoUpdates(retry.updates)) {
+      out = { context: out.context || retry.context, updates: retry.updates };
+    } else {
+      out = { context: out.context, updates: recent[recent.length - 1].text.slice(0, 240) };
+    }
+  }
+
+  if (!out.context && !out.updates) return null;
+  return out;
 }
 
 // Rewrites a single note for grammar/clarity/organization only — same facts,
