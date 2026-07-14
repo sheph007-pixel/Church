@@ -4,7 +4,16 @@ const { Pool } = require('pg');
 
 const app = express();
 app.use(express.json({ limit: '5mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+// public/ is 100% app source (index.html + the .jsx files, no images/fonts) that
+// changes on every deploy. Force every request to revalidate with the server
+// (Cache-Control: no-cache) rather than letting browsers apply heuristic freshness
+// and silently keep serving a pre-deploy copy after a reload. ETag/Last-Modified
+// stay on, so an unchanged file still comes back as a cheap 304.
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: true,
+  lastModified: true,
+  setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache'),
+}));
 
 // Build/version info. BOOT_TIME ≈ the deploy time (the process restarts on each
 // deploy), so the footer can show an accurate "updated" date + time automatically.
