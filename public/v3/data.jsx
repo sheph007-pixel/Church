@@ -138,7 +138,7 @@ Write TWO separate blurbs:
 
 1. "context" — ${SUMMARY_LEN_NOTE}: the general, big-picture situation — who this is about, what kind of help they need, and why, drawn from the notes as a whole (both sections below). This should read the same whether generated today or next month, so do NOT lead with or focus on the most recent note here — that belongs in "updates" below.
 
-2. "updates" — ${SUMMARY_LEN_NOTE}: based ONLY on the "NOTES FROM THE LAST 30 DAYS" section below — do not pull from "OLDER NOTES" for this blurb. If that section says "(none)", write exactly: "No updates in the last 30 days."
+2. "updates" — ${SUMMARY_LEN_NOTE}: based ONLY on the "NOTES FROM THE LAST 30 DAYS" section below — do not pull from "OLDER NOTES" for this blurb. Do not restate the general situation, ongoing themes, or background reasons already covered in "context" — describe only the concrete new development(s) themselves (what happened, what changed, what was decided). If context already says someone is "working on X," updates should name the specific thing that happened with X, not repeat that X is ongoing. If that section says "(none)", write exactly: "No updates in the last 30 days."
 
 Return ONLY valid JSON, no markdown code fences, no other text: {"context": "...", "updates": "..."}
 
