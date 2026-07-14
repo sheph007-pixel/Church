@@ -4,11 +4,14 @@
 // marks it "edited" (with the change logged to history) and is shown inline.
 // "Clean Up" rewrites the note for grammar/clarity only (same facts, same
 // meaning) via AI — the pre-cleanup text is kept so it can always be reverted.
-function NoteItem3({ n, author, me, caseId, onEditNote, onCleanupNote, onRevertNote, cleaning }) {
+// Delete is author-or-Team-Leader (broader than edit/clean-up, since a
+// GroupMe-imported note's author isn't necessarily the person cleaning it up).
+function NoteItem3({ n, author, me, caseId, onEditNote, onDeleteNote, onCleanupNote, onRevertNote, cleaning }) {
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(n.text);
   React.useEffect(() => { setDraft(n.text); setEditing(false); }, [n.id, n.text]);
   const mine = me && n.author === me.id;
+  const canDelete = mine || (me && me.isLeader);
   const wasCleaned = n.originalText != null;
   return (
     <article className="note">
@@ -42,16 +45,26 @@ function NoteItem3({ n, author, me, caseId, onEditNote, onCleanupNote, onRevertN
             </span>
           )}
         </div>
-        {mine && !editing && (
+        {!editing && (mine || canDelete) && (
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
-            <button className="icon-btn" title="Re-write for grammar and clarity — you can always revert"
-                    disabled={cleaning} onClick={() => onCleanupNote(caseId, n.id)}>
-              <Icon name="sparkle" size={13} stroke={1.7} className={cleaning ? 'spin' : ''} />
-            </button>
-            <button className="icon-btn" title="Edit note"
-                    onClick={() => { setDraft(n.text); setEditing(true); }}>
-              <Icon name="pencil" size={13} stroke={1.7} />
-            </button>
+            {mine && (
+              <button className="icon-btn" title="Re-write for grammar and clarity — you can always revert"
+                      disabled={cleaning} onClick={() => onCleanupNote(caseId, n.id)}>
+                <Icon name="sparkle" size={13} stroke={1.7} className={cleaning ? 'spin' : ''} />
+              </button>
+            )}
+            {mine && (
+              <button className="icon-btn" title="Edit note"
+                      onClick={() => { setDraft(n.text); setEditing(true); }}>
+                <Icon name="pencil" size={13} stroke={1.7} />
+              </button>
+            )}
+            {canDelete && (
+              <button className="icon-btn" title="Delete note"
+                      onClick={() => onDeleteNote(caseId, n.id)}>
+                <Icon name="close" size={13} stroke={1.7} />
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -71,7 +84,7 @@ function NoteItem3({ n, author, me, caseId, onEditNote, onCleanupNote, onRevertN
   );
 }
 
-function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, onCleanupNote, onRevertNote, cleaningNoteIds, onUpdate, onAddTask, onToggleTask, onDeleteTask, onSelectCase, onAddContact, onEditContact, onRemoveContact, onAddCareTeam, onEditCareTeam, onRemoveCareTeam, onSetAssignees, onShare, summaryEntry, onEnsureSummary, onRefreshSummary }) {
+function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, onDeleteNote, onCleanupNote, onRevertNote, cleaningNoteIds, onUpdate, onAddTask, onToggleTask, onDeleteTask, onSelectCase, onAddContact, onEditContact, onRemoveContact, onAddCareTeam, onEditCareTeam, onRemoveCareTeam, onSetAssignees, onShare, summaryEntry, onEnsureSummary, onRefreshSummary }) {
   const [noteText, setNoteText] = React.useState('');
   const [taskText, setTaskText] = React.useState('');
   const [taskDue, setTaskDue] = React.useState('');
@@ -304,7 +317,7 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
             {c.notes.length === 0 && <div className="empty-line">No notes yet.</div>}
             {notesNewestFirst(c.notes).map(n => {
               const a = team.find(t => t.id === n.author) || { name: 'Admin', initials: 'AD' };
-              return <NoteItem3 key={n.id} n={n} author={a} me={me} caseId={c.id} onEditNote={onEditNote}
+              return <NoteItem3 key={n.id} n={n} author={a} me={me} caseId={c.id} onEditNote={onEditNote} onDeleteNote={onDeleteNote}
                                 onCleanupNote={onCleanupNote} onRevertNote={onRevertNote}
                                 cleaning={!!(cleaningNoteIds && cleaningNoteIds[n.id])} />;
             })}

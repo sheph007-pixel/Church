@@ -1894,6 +1894,23 @@ function App() {
     }));
     logEvent(cid, 'note_cleanup_reverted', {});
   };
+  // Delete a note outright. Allowed for the note's author OR the Team Leader
+  // (GroupMe-imported notes often land under whichever deacon matched the
+  // sender name, not the person who'd actually be cleaning one up) — same
+  // reasoning as deleteTask/removeContact, but notes are more sensitive so
+  // this stays narrower than "any deacon." Logged to the activity trail like
+  // every other mutation.
+  const deleteNote = (cid, noteId) => {
+    const c0 = cases.find(c => c.id === cid);
+    const n0 = c0 && c0.notes.find(n => n.id === noteId);
+    if (!n0 || (n0.author !== meId && !me.isLeader)) return;
+    setCases(cs => cs.map(c => c.id !== cid ? c : {
+      ...c,
+      notes: c.notes.filter(n => n.id !== noteId),
+      lastActivity: stamp(),
+    }));
+    logEvent(cid, 'note_deleted', { preview: n0.text.slice(0, 80) });
+  };
   const updateCase = (cid, patch) => {
     const prev = cases.find(c => c.id === cid);
     const t = stamp();
@@ -2117,7 +2134,7 @@ function App() {
   if (selected) {
     const caseEvents = events.filter(e => e.caseId === selected.id);
     main = <CaseDetail3 c={selected} me={me} caseEvents={caseEvents} team={team} onBack={() => setSelectedId(null)}
-            onAddNote={addNote} onEditNote={editNote} onUpdate={updateCase}
+            onAddNote={addNote} onEditNote={editNote} onDeleteNote={deleteNote} onUpdate={updateCase}
             onCleanupNote={cleanupNote} onRevertNote={revertNote} cleaningNoteIds={cleaningNoteIds}
             onAddTask={addTask} onToggleTask={toggleTask} onDeleteTask={deleteTask}
             onAddContact={addContact} onEditContact={editContact} onRemoveContact={removeContact}
