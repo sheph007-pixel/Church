@@ -1,4 +1,4 @@
-// v3 app — cases, care team, AI summary, tasks, files, member admin
+// v3 app — cases, care team, tasks, files, member admin
 
 // ─── UI atoms ───────────────────────────────────────────
 // Resolve a member's avatar (initials + color) from the LIVE team index kept by
@@ -333,64 +333,4 @@ function CaseList3({ cases, onSelect, title, sub, q, setQ, onNew, onImport, onRe
   );
 }
 
-// ─── AI summary card ─────────────────────────────────────
-function AiSummaryCard({ c, entry, onEnsure, onRefresh }) {
-  // Auto-(re)generate when the case content signature changes (note/task added).
-  const sig = caseSig(c);
-  React.useEffect(() => { if (onEnsure) onEnsure(c); }, [c.id, sig]);
-
-  const context = entry && entry.context;
-  const updates = entry && entry.updates;
-  const hasAny = !!(context || updates);
-  const at = entry && entry.at;
-  const loading = !!(entry && entry.loading);
-  const firstLoad = loading && !hasAny;
-  const refreshing = loading && hasAny;
-
-  if (c.notes.length === 0) {
-    return (
-      <div className="ai-card ai-empty">
-        <Icon name="sparkle" size={14} stroke={1.7} />
-        <span>Add the first note and a summary will appear here.</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="ai-card">
-      <div className="ai-head">
-        <div className="ai-label">
-          <Icon name="sparkle" size={13} stroke={1.8} /> System Generated Summary
-        </div>
-        <button className="ai-refresh" onClick={() => onRefresh && onRefresh(c)} disabled={loading} title="Regenerate summary">
-          <Icon name="refresh" size={13} stroke={1.8} className={refreshing ? 'spin' : ''} />
-        </button>
-      </div>
-      {firstLoad ? (
-        <div className="ai-loading">
-          <span className="dot" /><span className="dot" /><span className="dot" />
-        </div>
-      ) : hasAny ? (
-        <>
-          <div className="ai-section">
-            <div className="ai-section-label">Quick Summary</div>
-            <p className="ai-body">{context || 'Summary unavailable.'}</p>
-          </div>
-          <div className="ai-section">
-            <div className="ai-section-label">Updates <span className="ai-section-sub">Last 30 days</span></div>
-            <p className="ai-body">{updates || 'No updates in the last 30 days.'}</p>
-          </div>
-        </>
-      ) : (
-        <p className="ai-body ai-fallback">Summary unavailable. Read notes below.</p>
-      )}
-      {hasAny && at && (
-        <div className="ai-foot">
-          {refreshing ? 'Updating…' : `Generated ${fmt3.dateTime(at)}`}
-        </div>
-      )}
-    </div>
-  );
-}
-
-Object.assign(window, { Av3, AvStack3, StatusPill3, Btn3, Sidebar3, CaseList3, AiSummaryCard });
+Object.assign(window, { Av3, AvStack3, StatusPill3, Btn3, Sidebar3, CaseList3 });

@@ -394,59 +394,6 @@
     background-repeat: no-repeat; background-position: right 6px center; background-size: 12px;
   }
 
-  /* AI summary card */
-  .ai-card {
-    background: var(--ai-soft);
-    border: 1px solid #e0d6f8;
-    border-radius: var(--r-lg);
-    padding: 14px 16px; margin-bottom: 28px;
-    position: relative;
-  }
-  .ai-empty {
-    background: var(--bg-soft); border-style: dashed; border-color: var(--border-strong);
-    color: var(--text-muted); font-size: 13px;
-    display: flex; align-items: center; gap: 8px;
-    padding: 14px 16px;
-  }
-  .ai-empty svg { color: var(--ai); }
-  .ai-head {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 6px;
-  }
-  .ai-label {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
-    text-transform: uppercase; color: var(--ai);
-  }
-  .ai-refresh {
-    background: none; border: none; padding: 4px;
-    color: var(--ai); border-radius: var(--r-sm); display: flex;
-  }
-  .ai-refresh:hover { background: rgba(109,40,217,0.08); }
-  .ai-refresh:disabled { opacity: 0.4; }
-  .ai-body {
-    margin: 0; font-size: 14.5px; line-height: 1.55; color: #2a1c4a;
-  }
-  .ai-fallback { color: var(--text-muted); font-style: italic; }
-  .ai-section + .ai-section {
-    margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(109,40,217,0.14);
-  }
-  .ai-section-label {
-    font-size: 10.5px; font-weight: 700; letter-spacing: 0.4px;
-    text-transform: uppercase; color: var(--ai); opacity: 0.75; margin-bottom: 3px;
-  }
-  .ai-section-sub { font-weight: 500; text-transform: none; opacity: 0.75; margin-left: 4px; }
-  .ai-foot {
-    font-size: 11px; color: var(--ai); opacity: 0.65;
-    margin-top: 8px;
-  }
-  .ai-loading { display: flex; gap: 4px; padding: 4px 0 6px; }
-  .ai-loading .dot {
-    width: 6px; height: 6px; border-radius: 99px; background: var(--ai); opacity: 0.4;
-    animation: bounce 1.2s ease-in-out infinite;
-  }
-  .ai-loading .dot:nth-child(2) { animation-delay: 0.15s; }
-  .ai-loading .dot:nth-child(3) { animation-delay: 0.3s; }
   @keyframes bounce { 0%, 100% { opacity: 0.3; transform: translateY(0); }
                       50% { opacity: 1; transform: translateY(-3px); } }
   .spin { animation: spin 800ms linear infinite; }
@@ -1208,7 +1155,7 @@
       font-size: 15.5px; font-weight: 600; color: var(--text-muted);
     }
     .mobile-tabs .mtab.on { background: var(--primary); border-color: var(--primary); color: #fff; }
-    /* Name/status (.hero) + summary (.ai-card) stay pinned; tabs swap the rest. */
+    /* Name/status (.hero) stays pinned; tabs swap the rest. */
     .detail.mtab-notes  .section-tasks { display: none; }
     .detail.mtab-notes  .detail-meta   { display: none; }
     .detail.mtab-tasks  .section-notes { display: none; }
@@ -2141,9 +2088,6 @@ function App() {
             onAddCareTeam={addCareTeam} onEditCareTeam={editCareTeam} onRemoveCareTeam={removeCareTeam}
             onSetAssignees={setAssignees}
             onShare={shareToGroupMe}
-            summaryEntry={summaries[selected.id]}
-            onEnsureSummary={ensureSummary}
-            onRefreshSummary={(c) => ensureSummary(c, true)}
             onSelectCase={setSelectedId} />;
   } else if (ADMIN_NAVS.includes(nav) && !adminUnlocked) {
     main = <AdminGate onUnlock={() => { sessionStorage.setItem('ib_admin_unlocked', '1'); setAdminUnlocked(true); }}
