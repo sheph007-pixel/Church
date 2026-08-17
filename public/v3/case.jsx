@@ -80,7 +80,7 @@ function NoteItem3({ n, author, me, caseId, onEditNote, onDeleteNote, onCleanupN
   );
 }
 
-function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, onDeleteNote, onCleanupNote, onRevertNote, cleaningNoteIds, onUpdate, onAddTask, onToggleTask, onDeleteTask, onSelectCase, onAddContact, onEditContact, onRemoveContact, onAddCareTeam, onEditCareTeam, onRemoveCareTeam, onSetAssignees, onShare, summaryEntry, onEnsureSummary, onRefreshSummary }) {
+function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, onDeleteNote, onCleanupNote, onRevertNote, cleaningNoteIds, onUpdate, onAddTask, onToggleTask, onDeleteTask, onSelectCase, onAddContact, onEditContact, onRemoveContact, onAddCareTeam, onEditCareTeam, onRemoveCareTeam, onSetAssignees, onShare }) {
   const [noteText, setNoteText] = React.useState('');
   const [taskText, setTaskText] = React.useState('');
   const [taskDue, setTaskDue] = React.useState('');
@@ -224,9 +224,6 @@ function CaseDetail3({ c, me, caseEvents, team, onBack, onAddNote, onEditNote, o
             <span>Last activity {fmt3.relative(c.lastActivity)}</span>
           </div>
         </div>
-
-        {/* AI summary */}
-        <AiSummaryCard c={c} entry={summaryEntry} onEnsure={onEnsureSummary} onRefresh={onRefreshSummary} />
 
         {/* Tasks */}
         <section className="section section-tasks">
