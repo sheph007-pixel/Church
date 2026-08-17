@@ -37,6 +37,45 @@ if (pool) {
     .catch(e => console.error('DB init:', e.message));
 }
 
+// ── The mis-filed $300 Walmart gift-card note ────────────────────────────────
+// The July-meeting gift-card decision was recorded on two cases at once: #1847
+// Amanda Jones (correct — the card is part of her assistance, and it's already in
+// her March note) and #6702 Amber Peterson, who the case data lists as *care team*
+// on Amanda's case. Only the #6702 copy is wrong.
+//
+// The case itself is deliberately left alone. The team took Amber to lunch in early
+// August, so #6702 may well have been opened on purpose; only the note is mis-filed.
+//
+// Deliberately narrow, because this deletes a real record: it can only ever reach
+// case 6702, and only notes matching all three of walmart + "gift card" + 300.
+// #1847's copy cannot be touched. Idempotent — once removed there is nothing left
+// to match. Every removal is logged to the Activity Log as note_deleted, the same
+// event the app's own delete button writes.
+const DUPE_CASE = '6702';
+const isMisfiledGiftCard = (t) => {
+  const s = String(t || '').toLowerCase();
+  return s.includes('walmart') && s.includes('gift card') && /\b300\b/.test(s);
+};
+function removeMisfiledGiftCard(state) {
+  const target = ((state || {}).cases || []).find(c => c.caseNumber === DUPE_CASE);
+  if (!target) return { removed: [], caseFound: false };
+  const matched = (target.notes || []).filter(n => isMisfiledGiftCard(n.text));
+  if (!matched.length) return { removed: [], caseFound: true };
+
+  const drop = new Set(matched.map(n => n.id));
+  target.notes = (target.notes || []).filter(n => !drop.has(n.id));
+  // Re-derive lastActivity from what's actually left, so the case doesn't keep
+  // advertising a date that belonged to the note we just took off it.
+  target.lastActivity = (target.notes || []).reduce((mx, n) => (n.date > mx ? n.date : mx),
+    target.opened || '') || target.lastActivity;
+  if (!Array.isArray(state.events)) state.events = [];
+  matched.forEach(n => state.events.unshift({
+    id: 'e_fix9_' + n.id, caseId: target.id, at: new Date().toISOString(),
+    who: n.author, kind: 'note_deleted', detail: { preview: String(n.text || '').slice(0, 80) },
+  }));
+  return { removed: matched, caseFound: true };
+}
+
 // ── Automatic data reconciliation (runs once per DATA_VERSION on boot) ──────
 // The live case/team data was originally reconstructed from a hard-to-read PDF
 // and had wrong years, missing cases, and missing past-deacon authors. When this
@@ -44,7 +83,7 @@ if (pool) {
 // authoritative seed (preserving the activity log). Version-gated so it runs only
 // once and never fights later edits. The marker lives in its own row so the
 // client's {cases,team,events} autosave can't clobber it.
-const DATA_VERSION = 5;
+const DATA_VERSION = 6;
 async function reconcileData() {
   if (!pool) return;
   try {
@@ -102,6 +141,15 @@ async function reconcileData() {
         console.log(`GroupMe catch-up: ${added.length} note(s) added, ${skipped.length} already present`
           + (missing.length ? `, ${missing.length} unmatched: ${missing.join(', ')}` : ''));
       }
+      if (applied < 6) {
+        // Un-file the $300 Walmart gift-card note from #6702 (it's Amanda Jones's).
+        // Applied here rather than behind a manual endpoint so the correction lands
+        // on deploy without anyone having to remember to trigger it.
+        const { removed, caseFound } = removeMisfiledGiftCard(state);
+        console.log(caseFound
+          ? `Gift-card fix: removed ${removed.length} mis-filed note(s) from #${DUPE_CASE}; case kept.`
+          : `Gift-card fix: no case #${DUPE_CASE} in the live data, nothing to do.`);
+      }
 
       await pool.query(
         `INSERT INTO app_state (id, state) VALUES ('singleton', $1)
@@ -131,27 +179,11 @@ app.get('/api/state', async (req, res) => {
   }
 });
 
-// ── Patch v9 — un-file the $300 Walmart gift card from #6702 ────────────────
-// The July-meeting gift-card decision was recorded on two cases at once: #1847
-// Amanda Jones (correct — the card is part of her assistance, and it's already in
-// her March note) and #6702 Amber Peterson, who the case data lists as *care team*
-// on Amanda's case. This removes the mis-filed copy from #6702 only.
-//
-// The case itself is deliberately left alone. The team took Amber to lunch in early
-// August, so #6702 may well have been opened on purpose; only the note is wrong.
-//
-// Safety rails, since this deletes real records:
-//   · dry run unless called with ?apply=1 — always shows what it would do first
-//   · scoped to case 6702; no other case can be reached, #1847's copy is untouched
-//   · the note must match on all three of walmart + "gift card" + 300 to qualify
-//   · idempotent: once removed there is nothing left to match, so re-running is safe
-//   · every removal is logged to the Activity Log as note_deleted, same as the
-//     app's own delete button, with the full text kept in the response
-const DUPE_CASE = '6702';
-const isMisfiledGiftCard = (t) => {
-  const s = String(t || '').toLowerCase();
-  return s.includes('walmart') && s.includes('gift card') && /\b300\b/.test(s);
-};
+// ── Patch v9 — inspect the $300 gift-card fix ───────────────────────────────
+// The removal itself runs automatically in the DATA_VERSION 6 reconcile above;
+// this endpoint exists to preview or confirm it. Dry run by default (writes
+// nothing); ?apply=1 performs the same removal by hand, which is only useful if
+// the note reappears after the migration has already been marked applied.
 app.get('/api/patch-v9', async (req, res) => {
   if (!pool) return res.status(503).json({ error: 'No database' });
   const apply = req.query.apply === '1';
@@ -165,42 +197,28 @@ app.get('/api/patch-v9', async (req, res) => {
       return res.json({ ok: true, applied: false, dryRun: !apply,
         message: `No case #${DUPE_CASE} in the live data — nothing to do.` });
     }
-
     const matched = (target.notes || []).filter(n => isMisfiledGiftCard(n.text));
-    const keptOnAmanda = (state.cases || [])
-      .filter(c => c.caseNumber !== DUPE_CASE)
-      .flatMap(c => (c.notes || []).filter(n => isMisfiledGiftCard(n.text))
-        .map(n => ({ caseNumber: c.caseNumber, caseName: c.name, noteId: n.id, date: n.date })));
-
     const report = {
       ok: true, dryRun: !apply, applied: false,
       case: { caseNumber: target.caseNumber, name: target.name, status: target.status,
         notesBefore: (target.notes || []).length },
       wouldRemove: matched.map(n => ({ noteId: n.id, date: n.date, author: n.author, text: n.text })),
-      untouchedElsewhere: keptOnAmanda,
+      untouchedElsewhere: (state.cases || [])
+        .filter(c => c.caseNumber !== DUPE_CASE)
+        .flatMap(c => (c.notes || []).filter(n => isMisfiledGiftCard(n.text))
+          .map(n => ({ caseNumber: c.caseNumber, caseName: c.name, noteId: n.id, date: n.date }))),
     };
 
     if (!matched.length) {
-      report.message = `Nothing on #${DUPE_CASE} matches the mis-filed gift-card note (already removed, or never there).`;
+      report.message = `Nothing on #${DUPE_CASE} matches the mis-filed gift-card note — already removed by the v6 migration, or never there.`;
       return res.json(report);
     }
     if (!apply) {
-      report.message = `Dry run — would remove ${matched.length} note(s) from #${DUPE_CASE}. Re-call with ?apply=1 to make the change.`;
+      report.message = `Dry run — ${matched.length} note(s) still on #${DUPE_CASE}. Re-call with ?apply=1 to remove by hand.`;
       return res.json(report);
     }
 
-    const removedIds = new Set(matched.map(n => n.id));
-    target.notes = (target.notes || []).filter(n => !removedIds.has(n.id));
-    // Re-derive lastActivity from what's actually left, so the case doesn't keep
-    // advertising a date that belonged to the note we just took off it.
-    target.lastActivity = (target.notes || []).reduce((mx, n) => (n.date > mx ? n.date : mx),
-      target.opened || '') || target.lastActivity;
-    if (!Array.isArray(state.events)) state.events = [];
-    matched.forEach(n => state.events.unshift({
-      id: 'e_fix9_' + n.id, caseId: target.id, at: new Date().toISOString(),
-      who: n.author, kind: 'note_deleted', detail: { preview: String(n.text || '').slice(0, 80) },
-    }));
-
+    const { removed } = removeMisfiledGiftCard(state);
     await pool.query(
       `INSERT INTO app_state (id, state) VALUES ('singleton', $1)
        ON CONFLICT (id) DO UPDATE SET state = $1, updated_at = NOW()`,
@@ -209,7 +227,7 @@ app.get('/api/patch-v9', async (req, res) => {
     report.applied = true;
     report.case.notesAfter = target.notes.length;
     report.case.lastActivity = target.lastActivity;
-    report.message = `Removed ${matched.length} mis-filed note(s) from #${DUPE_CASE}. Case kept. Amanda Jones's copy untouched.`;
+    report.message = `Removed ${removed.length} mis-filed note(s) from #${DUPE_CASE}. Case kept. Amanda Jones's copy untouched.`;
     res.json(report);
   } catch (e) {
     console.error('Patch-v9 error:', e.message);
