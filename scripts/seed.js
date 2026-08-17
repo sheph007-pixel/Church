@@ -426,10 +426,103 @@ const CASES = [
   },
 ];
 
+// ── GroupMe catch-up: 2026-06-04 → 2026-08-12 ───────────────────────────────
+// Verbatim record of what each deacon actually posted in the Internal Benevolence
+// GroupMe over the period the app had gone un-updated. This is the same thing the
+// GroupMe Sync tool produces (source: 'groupme'), just applied in bulk from the
+// export instead of one card at a time — so `text` is the deacon's own words,
+// copied exactly, never paraphrased, summarized, or added to.
+//
+// What is in here: requests/asks and real case updates.
+// What is deliberately left out: "Approve"/"Approved" votes, vote-chasing
+// reminders, questions put to the team, meeting/scheduling chatter, and anything
+// with no case attached (the IB budget balance, the poll-vs-message process
+// change, the All Kids insurance tip). Those are team business, not case record.
+//
+// `gm` is the GroupMe message id the text came from — it makes the note id
+// deterministic (`n_gm_<id>`), so seeding and reconciling can both run repeatedly
+// without ever creating a second copy of the same message.
+const GROUPME_CATCHUP = [
+  { num: '4821',  gm: '178059330919817522',  author: 'tm_dc', date: '2026-06-04T17:15:09.000Z',
+    text: 'Approval needed(Hopefully last time) one more rental car weekly rental for Patrice. $350  Carey’s car is at the church but we still need more time to get everything transferred over. Title , Bill of Sale, Insurance etc' },
+  { num: '6290',  gm: '178111319539328690',  author: 'tm_kc', date: '2026-06-10T17:39:55.000Z',
+    text: 'The Brightwells have asked for help with their June bills totaling $2876.41. It\'s almost entirely mortgage, utilities, insurance and groceries.\nJon\'s interviews dis not lead to a new job. He just started getting unemployment ($275) and has about $1650 in backlog payments he has not yet received.' },
+  { num: '1847',  gm: '178145889032682405',  author: 'tm_rs', date: '2026-06-14T17:41:30.000Z',
+    text: 'Guys, Keith B and I met w Amanda J for a care team meeting this morning during KC. \nHer former husband is running behind on child support and has given us other concerns by his behavior. \n\nShe is meeting w her attorney on the 22nd. I’m asking that we cover the $350 fee and am seeking approval from our team. Please let me know if you have any questions or thoughts.' },
+  { num: '4821',  gm: '178170876003604016',  author: 'tm_dc', date: '2026-06-17T15:06:00.000Z',
+    text: 'Approval to pay $381.13 for rental car this next week for Patrice (Juneteenth is making this rate even higher.) Praying we get the title soon' },
+  { num: '2967',  gm: '178181372980709959',  author: 'tm10',  date: '2026-06-18T20:15:29.000Z',
+    text: 'FYI. Hold off on any assistance with Ali Tutak. I updated notes in system. Marked as completed.' },
+  { num: '4821',  gm: '178233353890406946',  author: 'tm_dc', date: '2026-06-24T20:38:58.000Z',
+    text: 'This week’s ask for Patrice:\nRent assistance $380\nRental car $391.78\nUS P O Box $99\nTotal; $870.78\nShe is needing rent help due to her low hrs because of her missing work due to diverticulitis' },
+  { num: '6290',  gm: '178275795022483014',  author: 'tm_kc', date: '2026-06-29T18:32:30.000Z',
+    text: 'Asking for approval for $1973 for the Brightwell\'s insurance premium for July.' },
+  { num: '7354',  gm: '178300132865839490',  author: 'tm_ts', date: '2026-07-02T14:08:48.000Z',
+    text: 'Gentlemen, i spoke with Crystal Waldo yesterday and let me know a financial need. Due to a payroll issue she is down $900 in he monthly paycheck and her ex continues to not pay child support. She will get back a portion of the pay roll mishap in next months paycheck. At the moment she has $200 in her account. We reviewed expenses and she will need -$2000 to get through the month. Requesting approval of this amount. Thanks\nShe doesn’t get a paycheck until next month' },
+  { num: '4821',  gm: '178330290982235206',  author: 'tm_dc', date: '2026-07-06T01:55:09.000Z',
+    text: 'Patrice Request: Chase and I have been discussing and agree this is a great opportunity for her oldest son, Thomas. He has special needs and been accepted into The Exceptional Foundation in Homewood. \n\n$500 request is to help pay July tuition. (There is a very high probability he could get scholarships for tuition/dues starting in October.)\nThe monthly amount has to be paid before starting. Patrice is hoping to take him tomorrow.' },
+  { num: '6290',  gm: '178336329399920938',  author: 'tm_kc', date: '2026-07-06T18:41:33.000Z',
+    text: 'Gents, the Brightwells have nills totaling $2821.08 for July. This is mostly for utilities, a HELOC payment, gas and groceries. There is nothing frivolous on the list. Please let me know if you approve or have any questions.' },
+  { num: '6290',  gm: '178342951660670241',  author: 'tm_kc', date: '2026-07-07T13:05:16.000Z',
+    text: 'I\'ve asked him and am waiting for a response. I didn\'t press him on it earlier bc it seemed he was getting several interviews and felt he was close to getting a full time job.\nJust heard back. He has looked at jobs at various stores in his area with no luck. One of them told him he was over qualified to work there. Grady and I will have to have a discussion with him if this latest opportunity doesn\'t pan out.' },
+  { num: '6290',  gm: '178430269149848273',  author: 'tm_kc', date: '2026-07-17T15:38:11.000Z',
+    text: 'I have some good news. Jon Brightwell has started working with a masonry group to earn some money. There looks like there may be a job at the company he applied to (though not the job he wanted) and he should hear from them shortly.\nIn the meantime,  they have asked for help with their mortgage, utilities and healthcare bills. I know it will likely need to come from the Deacon\'s Fund. The total is $3,797.57. The only thing I\'m concerned about in their request is an $800 for their home school co-op that covers all three boys. I\'m not sure about covering this but am open to input from others.' },
+  { num: '4821',  gm: '178483427412082308',  author: 'tm_dc', date: '2026-07-23T19:17:54.000Z',
+    text: 'Hey guys, Patrice is requesting $250 for food to get her to her next paycheck. She says she has her rent and gas money taken care of.' },
+  { num: '6290',  gm: '178536427696185288',  author: 'tm_kc', date: '2026-07-29T22:31:16.000Z',
+    text: 'The Brightwells have requested we pay their health insurance premium for August. It\'s $1973.90. \n\nI\'m working with Grady to set a plan where we start to ween Jon off of financial assistance. We obviously can\'t keep spending at this rate. I don\'t have an employment update from him yet. But, I would like to get their insurance taken care of.' },
+  { num: '6290',  gm: '178538274544226679',  author: 'tm_kc', date: '2026-07-30T03:39:05.000Z',
+    text: 'From Jon:\nI am helping at the masonry crew for $20 an hour but due to weather and temperatures we have not been able to get in full days of work. I would round it out to $350-$400 a week. \n\nMy job opportunities are as usual. Very hard to get a call back, but sometimes I get a few interviews and begin to have hope only to not hear from them again. This one that I have been working with that I would be a hybrid employee with a company in Maine seems hopeful, I just wish I would know something sooner than their timeline.' },
+  { num: '7354',  gm: '178576850845599198',  author: 'tm_ts', date: '2026-08-03T14:48:28.000Z',
+    text: 'Hey y’all, I spoke with Crystal Waldo today. She was sort of in a panic and was so low she couldn’t get gas. I went ahead and sent her $500 but we went through what she needs for the month and I believe she will need a total of 1000 asking for that approval. Thanks. Let me know if you have any questions.' },
+  { num: '4821',  gm: '178587465778135337',  author: 'tm_dc', date: '2026-08-04T20:17:37.000Z',
+    text: 'Created new poll \'Seeking approval for $500 to pay Exceptional Foundation fee for Patrice’s son, TW for August\'' },
+  { num: '4821',  gm: '178587947996710660',  author: 'tm_dc', date: '2026-08-04T21:37:59.000Z',
+    text: 'She has been working every weekend. (Saturday and unfortunately Sunday) I dropped in last Saturday unannounced to give her a birthday gift and she was working the front desk at Ross Bridge. I know she really wants to be at church, but she is scheduled most every Sunday. She has tried to adjust her schedule but she also really needs the hours. \nI’d love to get her in a different position (out of hospitality) to get better hours.' },
+  { num: '6290',  gm: '178648829352072540',  author: 'tm_kc', date: '2026-08-11T22:44:53.000Z',
+    text: 'Gents, an update on the Brightwells. Jon is still working a part time masonry job and has expanded his jon search outside of the state. After talking with him, I think his problems could be mitigated with some professional career coaching.  Ed recommended someone he used years ago that is a believer and has reasonable rates. We\'re reviewing Jon\'s situation tomorrow.\nJon gets lots of interviews but doesn\'t seem to be able to close the deal. I think this could help.\nIn the meantime,  they need help with insurance, their mortgage,  healthcare costs, and utilities for August in the sum of $2901.92. This also includes money for groceries and gas. Please let me know if you approve or have any questions.' },
+  { num: '6290',  gm: '178654552461992592',  author: 'tm_kc', date: '2026-08-12T14:38:44.000Z',
+    text: 'One last note. Jon has maxed out his HELOC. Hunter and I are meeting with him next week to talk about what we can reasonably do to pull back financial support.  He\'s incredibly frustrated and ashamed that he\'s been unable to provide for his family.  Let me know if there are any questions.' },
+];
+
+// Merge GROUPME_CATCHUP into a cases array, in place. Additive and idempotent:
+// a note already present (by deterministic id, or by identical text on that same
+// case) is skipped, so this is safe to run on a live DB more than once. Notes are
+// prepended newest-first to match how the app stores them.
+// Returns { added, skipped, missing }.
+function applyGroupmeCatchup(cases) {
+  const added = [], skipped = [], missing = [], touched = new Set();
+  // Oldest first, so repeated unshifts leave the array newest-first.
+  GROUPME_CATCHUP.slice().sort((a, b) => a.date.localeCompare(b.date)).forEach(n => {
+    const c = (cases || []).find(x => x.caseNumber === n.num);
+    if (!c) { missing.push(n.num + ' / ' + n.gm); return; }
+    if (!Array.isArray(c.notes)) c.notes = [];
+    touched.add(c);
+    const id = 'n_gm_' + n.gm;
+    if (c.notes.some(x => x.id === id || (x.text || '').trim() === n.text.trim())) {
+      skipped.push(c.caseNumber + ' ' + n.date.slice(0, 10));
+      return;
+    }
+    c.notes.unshift({ id, author: n.author, date: n.date, text: n.text, source: 'groupme' });
+    added.push({ caseNumber: c.caseNumber, name: c.name, author: n.author, date: n.date, id, text: n.text });
+  });
+  // Re-derive lastActivity from the notes actually on each case we touched. Driving
+  // it off max(note date) rather than only off what we just inserted keeps the case
+  // header honest when a note was skipped because a deacon had already typed it in.
+  touched.forEach(c => {
+    (c.notes || []).forEach(n => {
+      if (n.date && (!c.lastActivity || n.date > c.lastActivity)) c.lastActivity = n.date;
+    });
+  });
+  return { added, skipped, missing };
+}
+
+applyGroupmeCatchup(CASES);
+
 const STATE = {
   team: TEAM,
   cases: CASES,
   events: [],
 };
 
-module.exports = { STATE, TEAM, CASES };
+module.exports = { STATE, TEAM, CASES, GROUPME_CATCHUP, applyGroupmeCatchup };

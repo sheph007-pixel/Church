@@ -44,7 +44,7 @@ if (pool) {
 // authoritative seed (preserving the activity log). Version-gated so it runs only
 // once and never fights later edits. The marker lives in its own row so the
 // client's {cases,team,events} autosave can't clobber it.
-const DATA_VERSION = 4;
+const DATA_VERSION = 5;
 async function reconcileData() {
   if (!pool) return;
   try {
@@ -54,7 +54,7 @@ async function reconcileData() {
 
     const { rows } = await pool.query("SELECT state FROM app_state WHERE id = 'singleton'");
     if (rows[0] && rows[0].state) {
-      const { TEAM, CASES } = require('./scripts/seed.js');
+      const { TEAM, CASES, applyGroupmeCatchup } = require('./scripts/seed.js');
       const state = JSON.parse(JSON.stringify(rows[0].state));
 
       if (applied < 2) {
@@ -79,6 +79,28 @@ async function reconcileData() {
           const m = n.text.match(/^(.+?)\s+—\s+([\s\S]+)$/);
           if (m && byName[m[1].trim().toLowerCase()]) { n.author = byName[m[1].trim().toLowerCase()]; n.text = m[2].trim(); }
         }));
+      }
+      if (applied < 5) {
+        // Catch the live cases up on the GroupMe record for 2026-06-04 → 2026-08-12,
+        // which nobody had entered. Verbatim deacon posts, same shape the GroupMe Sync
+        // tool writes; see GROUPME_CATCHUP in scripts/seed.js for what's included and
+        // what's left out. Additive and de-duplicating, so an event a deacon already
+        // typed in by hand is skipped rather than doubled.
+        const { added, skipped, missing } = applyGroupmeCatchup(state.cases);
+        // Mirror the per-note history entry the Sync tool logs, attributed to the
+        // deacon who wrote it and stamped with when they wrote it (not now), so the
+        // case history reads in the order things actually happened.
+        if (!Array.isArray(state.events)) state.events = [];
+        added.forEach(n => {
+          const eid = 'e_gm_' + n.id.replace(/^n_gm_/, '');
+          if (state.events.some(e => e.id === eid)) return;
+          state.events.unshift({
+            id: eid, caseId: (state.cases.find(c => c.caseNumber === n.caseNumber) || {}).id || null,
+            at: n.date, who: n.author, kind: 'sync_note_imported', detail: { preview: (n.text || '').slice(0, 80) },
+          });
+        });
+        console.log(`GroupMe catch-up: ${added.length} note(s) added, ${skipped.length} already present`
+          + (missing.length ? `, ${missing.length} unmatched: ${missing.join(', ')}` : ''));
       }
 
       await pool.query(
