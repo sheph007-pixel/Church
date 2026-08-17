@@ -131,6 +131,104 @@ app.get('/api/state', async (req, res) => {
   }
 });
 
+// ── Duplicate audit (READ-ONLY — never writes to the DB) ────────────────────
+// Answers "is the same thing recorded twice?" across the live case notes. Three
+// checks, because double-entry shows up in three different shapes:
+//
+//   A. same_case      — two notes on one case quoting the same dollar amount close
+//                       together in time. A recurring bill (COBRA every month, say)
+//                       repeats the same amount legitimately, which is why this is
+//                       date-bounded rather than a bare amount match.
+//   B. cross_case     — the same amount on two DIFFERENT cases with near-identical
+//                       wording: one decision filed against two people.
+//   C. helper_as_case — a case named after someone who is listed as care team on
+//                       another case, i.e. a volunteer opened as a recipient.
+//
+// Everything here is a *candidate* for a human to judge, not a verdict, and nothing
+// is modified or deleted — fixing anything is a deacon's call in the app.
+const AUDIT_WINDOW_DAYS = 45;
+app.get('/api/audit-notes', async (req, res) => {
+  if (!pool) return res.status(503).json({ error: 'No database' });
+  try {
+    const { rows } = await pool.query("SELECT state FROM app_state WHERE id = 'singleton'");
+    if (!rows[0]) return res.status(404).json({ error: 'No state in DB' });
+    const cases = (rows[0].state || {}).cases || [];
+
+    const amounts = (t) => Array.from(new Set((String(t || '').match(/\$\s?[\d,]+(?:\.\d{1,2})?/g) || [])
+      .map(a => a.replace(/[^0-9.]/g, '').replace(/\.0+$/, '').replace(/\.$/, ''))
+      .filter(a => Number(a) >= 50)));           // ignore trivial figures like "$20 an hour"
+    const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const words = (s) => new Set(norm(s).split(' ').filter(w => w.length >= 4));
+    const similarity = (a, b) => {              // Jaccard overlap on words of 4+ chars
+      const A = words(a), B = words(b);
+      if (!A.size || !B.size) return 0;
+      const inter = [...A].filter(w => B.has(w)).length;
+      return inter / new Set([...A, ...B]).size;
+    };
+    const daysApart = (a, b) => Math.abs(new Date(a) - new Date(b)) / 86400000;
+    const brief = (n, c) => ({ caseNumber: c.caseNumber, caseName: c.name, noteId: n.id,
+      date: (n.date || '').slice(0, 10), author: n.author, source: n.source || 'manual',
+      text: String(n.text || '').replace(/\s+/g, ' ').slice(0, 160) });
+
+    const flat = [];
+    cases.forEach(c => (c.notes || []).forEach(n => flat.push({ n, c, amts: amounts(n.text) })));
+
+    const same_case = [], cross_case = [];
+    for (let i = 0; i < flat.length; i++) {
+      for (let j = i + 1; j < flat.length; j++) {
+        const a = flat[i], b = flat[j];
+        const shared = a.amts.filter(x => b.amts.includes(x));
+        if (!shared.length) continue;
+        const gap = daysApart(a.n.date, b.n.date);
+        if (a.c === b.c) {
+          if (gap <= AUDIT_WINDOW_DAYS) {
+            same_case.push({ sharedAmounts: shared, daysApart: Math.round(gap),
+              similarity: Number(similarity(a.n.text, b.n.text).toFixed(2)),
+              notes: [brief(a.n, a.c), brief(b.n, b.c)] });
+          }
+        } else {
+          const sim = similarity(a.n.text, b.n.text);
+          if (gap <= AUDIT_WINDOW_DAYS && sim >= 0.5) {
+            cross_case.push({ sharedAmounts: shared, daysApart: Math.round(gap),
+              similarity: Number(sim.toFixed(2)), notes: [brief(a.n, a.c), brief(b.n, b.c)] });
+          }
+        }
+      }
+    }
+
+    // C. A case named after a care-team member on some other case.
+    const helper_as_case = [];
+    cases.forEach(c => {
+      const target = norm(c.name);
+      if (!target) return;
+      cases.forEach(other => {
+        if (other === c) return;
+        (other.careTeam || []).forEach(m => {
+          if (norm(m.name) && norm(m.name) === target) {
+            helper_as_case.push({ caseNumber: c.caseNumber, caseName: c.name, status: c.status,
+              notes: (c.notes || []).length,
+              alsoCareTeamOn: { caseNumber: other.caseNumber, caseName: other.name, role: m.role || '' } });
+          }
+        });
+      });
+    });
+
+    // Highest-similarity pairs first — the likeliest true doubles at the top.
+    const bySim = (x, y) => y.similarity - x.similarity;
+    res.json({
+      ok: true, readOnly: true, windowDays: AUDIT_WINDOW_DAYS,
+      scanned: { cases: cases.length, notes: flat.length },
+      counts: { same_case: same_case.length, cross_case: cross_case.length, helper_as_case: helper_as_case.length },
+      cross_case: cross_case.sort(bySim),
+      helper_as_case,
+      same_case: same_case.sort(bySim),
+    });
+  } catch (e) {
+    console.error('Audit-notes error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Minimal roster (deacons only) for the login screen — lets any deacon be
 // matched by email before sign-in WITHOUT exposing confidential case data.
 app.get('/api/roster', async (req, res) => {
